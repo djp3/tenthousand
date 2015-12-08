@@ -73,13 +73,11 @@ module.exports = {
 			};
 	 */
 	from_api_ajax_join_game:function(user_id, game_id) {
-		console.log("not implemented");
-		return null;
 		if (validate_ID_help === false) {
 			console.log("Error: Invalid game ID. Please try again.");
 		} else if (validate_ID_help) {
-			joinGame(user_id, game_id);
-			return our_socket.socket_player_joined_game(game_id, user_id);
+			var players = joinGame(user_id, game_id);
+			return our_socket.socket_player_joined_game(game_id, players);
 		}
 	},
 	/*****************************************/
@@ -348,6 +346,7 @@ var joinGame = function(userID, gameID) {
 	} else {
 		console.log("Error: Invalid game ID. Please try again.");
 	}
+	return gameID.listOfPlayers;
 };
 
 //Needs work

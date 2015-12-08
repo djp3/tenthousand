@@ -32,10 +32,7 @@ var ui_main = function(){
 			
 		var callback_function = function(result){
 			if(result.error == false){
-            	$("div#ajax_create_game_box #user").html(result.game_id);
-				ui_game_id = result.game_id;
-				console.log("hello world");
-				window.open("page.html","_self");
+				window.open("page.html?game_id="+result.game_id+"&user_id="+user_id,"_self");
 			}
 			else{
 				alert("We couldn't register your game because:"+result.errors[0]);
