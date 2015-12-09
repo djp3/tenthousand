@@ -73,13 +73,14 @@ module.exports = {
 			};
 	 */
 	from_api_ajax_join_game:function(user_id, game_id) {
-		console.log("not implemented");
-		return null;
 		if (validate_ID_help === false) {
 			console.log("Error: Invalid game ID. Please try again.");
 		} else if (validate_ID_help) {
-			joinGame(user_id, game_id);
-			return our_socket.socket_player_joined_game(game_id, user_id);
+			var theGame = findGame(game_id, validGames);
+			var newPlayer = new Player(user_id);
+			theGame.listOfPlayers.push(newPlayer);
+			socket.socket_player_joined_game(game_id, user_id);
+			return theGame.listOfPlayers;
 		}
 	},
 	/*****************************************/
@@ -165,15 +166,15 @@ var createFields = function(smallfieldnum, bigfieldnum) {
 
 	var resultFields = [];
 
-	resultFields.push(new Field("large", "silo"));
-	resultFields.push(new Field("large", "building"));
+	resultFields.push(new Field("large", "silo", null, null));
+	resultFields.push(new Field("large", "building", null, null));
 	for (var i = 0; i < (bigfieldnum - 2); i++) {
-		resultFields.push(new Field("large", "irrigation"));
+		resultFields.push(new Field("large", "irrigation", null, null));
 	}
-	resultFields.push(new Field("small", "silo"));
-	resultFields.push(new Field("small", "building"));
+	resultFields.push(new Field("small", "silo", null, null));
+	resultFields.push(new Field("small", "building", null, null));
 	for (var j = 0; j < (smallfieldnum - 2); j++) {
-		resultFields.push(new Field ("small", "irrigation"));
+		resultFields.push(new Field ("small", "irrigation", null, null));
 	}
 	return resultFields;
 };
@@ -188,31 +189,31 @@ var distribute_fields = function(gameID){
 		validGames[gameNum] = tempGame;
 	}
 	else if (tempGame.listOfPlayers.length === 3) {
-		tempGame.listOfPlayers[0] = new Player(findGame(gameID, validGames).listOfPlayers[0].playerID, createFields(7,6).push(new Field("small", "irrigation")));
-		tempGame.listOfPlayers[1] = new Player(findGame(gameID, validGames).listOfPlayers[1].playerID, createFields(7,6).push(new Field("small", "irrigation")));
+		tempGame.listOfPlayers[0] = new Player(findGame(gameID, validGames).listOfPlayers[0].playerID, createFields(7,6).push(new Field("small", "irrigation", null, null)));
+		tempGame.listOfPlayers[1] = new Player(findGame(gameID, validGames).listOfPlayers[1].playerID, createFields(7,6).push(new Field("small", "irrigation", null, null)));
 		tempGame.listOfPlayers[2] = new Player(findGame(gameID, validGames).listOfPlayers[2].playerID, createFields(7,6));
 		validGames[gameNum] = tempGame;
 	}
 	else if (tempGame.listOfPlayers.length === 4) {
-		tempGame.listOfPlayers[0] = new Player(findGame(gameID, validGames).listOfPlayers[0].playerID, createFields(6,5).push(new Field("small", "irrigation")));
-		tempGame.listOfPlayers[1] = new Player(findGame(gameID, validGames).listOfPlayers[1].playerID, createFields(6,5).push(new Field("small", "irrigation")));
+		tempGame.listOfPlayers[0] = new Player(findGame(gameID, validGames).listOfPlayers[0].playerID, createFields(6,5).push(new Field("small", "irrigation", null, null)));
+		tempGame.listOfPlayers[1] = new Player(findGame(gameID, validGames).listOfPlayers[1].playerID, createFields(6,5).push(new Field("small", "irrigation", null, null)));
 		tempGame.listOfPlayers[2] = new Player(findGame(gameID, validGames).listOfPlayers[2].playerID, createFields(6,5));
 		tempGame.listOfPlayers[3] = new Player(findGame(gameID, validGames).listOfPlayers[3].playerID, createFields(6,5));
 		validGames[gameNum] = tempGame;
 	}
 	else if (tempGame.listOfPlayers.length === 5) {
-		tempGame.listOfPlayers[0].playerFields = createFields(5,4).push(new Field("small", "irrigation"));
-		//tempGame.listOfPlayers[0] = new Player(findGame(gameID, module.exports.validGames).listOfPlayers[0].playerID, createFields(5,4).push(new Field("small", "irrigation")));
-		tempGame.listOfPlayers[1] = new Player(findGame(gameID, module.exports.validGames).listOfPlayers[1].playerID, createFields(5,4).push(new Field("small", "irrigation")));
+		tempGame.listOfPlayers[0].playerFields = createFields(5,4).push(new Field("small", "irrigation", null, null));
+		//tempGame.listOfPlayers[0] = new Player(findGame(gameID, module.exports.validGames).listOfPlayers[0].playerID, createFields(5,4).push(new Field("small", "irrigation", null, null)));
+		tempGame.listOfPlayers[1] = new Player(findGame(gameID, module.exports.validGames).listOfPlayers[1].playerID, createFields(5,4).push(new Field("small", "irrigation", null, null)));
 		tempGame.listOfPlayers[2] = new Player(findGame(gameID, module.exports.validGames).listOfPlayers[2].playerID, createFields(5,4));
 		tempGame.listOfPlayers[3] = new Player(findGame(gameID, module.exports.validGames).listOfPlayers[3].playerID, createFields(5,4));
-		tempGame.listOfPlayers[4] = new Player(findGame(gameID, module.exports.validGames).listOfPlayers[4].playerID, createFields(5,4));
-		module.exports.validGames[gameNum] = tempGame;
+ 		module.exports.validGames[gameNum] = tempGame;
 	}
 };
 
 
 //RemoveField will remove the field played from the hand, and add it to the fields played array
+//TODO: change to separate x and y coordinates based on return from UI
 var removeField = function(fsize, ftype, player, xy) {
 	for (var i = 0; i < player.playerFields.length; i++) {
 		if (player.playerFields[i].size === fsize
@@ -339,17 +340,7 @@ function advance_turn(gameID){
 	theGame.whoseTurn = theGame.listOfPlayers.indexOf(get_current_player()).next();
 }
 
-var joinGame = function(userID, gameID) {
-	var gameIDString = gameID.gameID;
-	console.log("TEST: " + gameIDString);
-	if (validate_ID_help(gameIDString)) {
-		gameID['listOfPlayers'].push(userID);
-		console.log("All players: " + gameID.listOfPlayers);
-	} else {
-		console.log("Error: Invalid game ID. Please try again.");
-	}
-};
-
+/*
 //Needs work
 var startGame = function(game) {
 	game.startTime = sysCurrentTime;
@@ -369,7 +360,7 @@ var advanceTurn = function(game) {
 	//}
 	console.log("Current player: " + currentPlayer);
 };
-
+*/
 
 var minor_assignments = [[{type:"small", x:0, y:0}, {type:"small", x:1, y:0}, {type:"small", x:2, y:0}],
 	[{type:"large", x:0, y:0}, {type:"small", x:2, y:0}, {type:"small", x:2, y:1}],
