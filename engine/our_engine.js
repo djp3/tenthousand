@@ -258,7 +258,8 @@ var get_valid_assignments = function(game_id){
 	var currentGame = findGame(game_id);
 	var validAssignments = [];
 	for(var i = 0; i < currentGame.get_assignments(); i++){
-		if(currentGame.get_assignments()[i].contains_tile_size(currentGame.get_fields())) {
+		if(currentGame.get_assignments()[i].isValidAssignment(currentGame.fieldsPlayed)) {
+			validAssignments.concat(currentGame.get_assignments()[i]);
 		}
 	}
 	return validAssignments;
