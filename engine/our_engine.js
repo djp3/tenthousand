@@ -1,8 +1,15 @@
 // The functions the API server sees
 
-CircularList = require('circular-list')
+CircularList = require('circular-list');
+//TODO: Sam, Assignment.js file needs to be fixed for the requirement to work
+//Assignment = require('Assignment')
+
+var validGames = [];
+var PlayedFields = [];
 
 module.exports = {
+
+	validGames: validGames,
 
 	/*****************************************
 	 result = { 	error:false,
@@ -13,7 +20,7 @@ module.exports = {
 		var result = { 	error:false,
 			errors:[],
 			time: call_get_time()
-		}
+		};
 		return result;
 	},
 	/*****************************************/
@@ -34,19 +41,20 @@ module.exports = {
 			 	game_id: <game_id>
 			};
 	 */
-	createCircularList:function(user_id){
-		var list = new CircularList
-		for(var i = 0; i < user_id.length; i++) {
-			list.append(new CircularList.Node(user_id[i]))
-		}
-		return list
-	},
+
 
 	from_api_ajax_create_game:function(user_id, turn_length) {
 		var the_game_id = call_create_ID();
-		var new_game = new game(the_game_id, [user_id], turn_length, "NA", user_id);
+		var listOfPlayers = [];
+		listOfPlayers.push(user_id);
+		var new_game = new Game(the_game_id, listOfPlayers, turn_length, "NA", user_id);
 		console.log(the_game_id);
-		return the_game_id;
+		module.exports.validGames.push(new_game);
+		var ret = {};
+		ret.error = false;
+		ret.errors = [];
+		ret.game_id = the_game_id;
+		return ret;
 	},
 	/*****************************************/
 
@@ -64,27 +72,25 @@ module.exports = {
 			 	players: [<player1_name>,<player2_name>,<player3_name>,<player4_name>]; //possibly null
 			};
 	 */
-	from_api_ajax_join_game:function(user_id, game_id) {
-		console.log("not implemented");
-		return null;
-		/* Commented out by djp3 because validate_ID is undefined */
-		if (validate_ID === false) {
+	from_api_ajax_join_game:function(query) {
+		var user_id = query.user_id;
+		var game_id = query.game_id;
+		if (validate_ID_help === false) {
 			console.log("Error: Invalid game ID. Please try again.");
-		} else if (validate_ID) {
-// code to join game
+		} else if (validate_ID_help) {
+			var theGame = findGame(game_id, validGames);
+			var newPlayer = new Player(user_id);
+			theGame.listOfPlayers.push(newPlayer);
+			//socket.socket_player_joined_game(game_id, user_id);
+			return theGame.listOfPlayers;
 		}
 	},
 	/*****************************************/
 
-	get_game_instance:function(game_id){
-		//DO STUFF!!!!!
-		return null
-	},
-
 	turn_start:function(user_id, game_id){
-		game = get_game_instance(game_id)
-		game.whoseturn = user_id
-		setTimeout(game.advance_turn,game.turnlimit)
+		var theGame = findGame(game_id, validGames);
+		theGame.whoseturn = user_id;
+		setTimeout(advance_turn(game_id),theGame.turnLimit * 1000)
 	},
 
 
@@ -99,11 +105,23 @@ module.exports = {
 	 result = {
 				error: <true/false>,
 			 	errors:[list of errors],
-			 	time_started: <absolute time when game started>
+				whatever the UI team wants
 			};
 	 */
-	from_api_start_game:function(incoming){
-		console.log("not implemented");
+	from_api_start_game:function(query){
+		var game_id = query.game_id;
+		distribute_fields(game_id);
+		distribute_assignments_at_start(game_id);
+
+		var ret = {};
+
+		ret.error = false;
+		ret.errors = [];
+
+		ret.players = findGame(game_id, validGames).listOfPlayers;
+
+		return ret;
+
 	},
 	/*****************************************/
 
@@ -116,140 +134,152 @@ module.exports = {
 
 	 returns null;
 	 */
-	from_api_player_is_done:function(incoming){
-		console.log("not implemented");
+	from_api_player_is_done:function(game_id, user_id, xy_coordinates, field_type, field_size) {
+		//console.log("not implemented");
+		var currentGame = findGame(game_id, validGames);
+		var ret = {};
+		var currentPlayer = findPlayer(currentGame, user_id);
+		removeField(field_type, field_size, currentPlayer, xy_coordinates);
+		ret.error = false;
+		ret.errors = [];
+		ret.playedfields = PlayedFields;
 	},
 
-
-
-	//createID returns a random GUID for use as a game ID
-	create_ID : function(){
-		return call_create_ID();
-	},
-
-	validate_ID : function(id) {
-		return validate_ID_help(id);
+	createCircularList:function(user_id){
+		var list = new CircularList;
+		for(var i = 0; i < user_id.length; i++) {
+			list.append(new CircularList.Node(user_id[i]))
+		}
+		return list
 	}
 };
 
-validate_ID_help = function(id){
-	for (i = 0; i < validGames.length; i++) {
-		if (validGames[i].gameID == id) {
+var validate_ID_help = function(id){
+	for (var i = 0; i < validGames.length; i++) {
+		if (validGames[i].gameID === id) {
 			return true;
 		}
 	}
 	return false;
-}
+};
 
-createfields = function(smallfieldnum, bigfieldnum) {
-	var resultfields = [];
+var createFields = function(smallfieldnum, bigfieldnum) {
+	//Creates an array of fields based on the starting number of fields.
 
-	resultfields.push(field("big", "silo"));
-	resultfields.push(field("big", "building"));
-	for (i = 0; i < (bigfieldnum - 2); i++) {
-		resultfields.push(field("big", "irrigation"))
+	var resultFields = [];
+
+	resultFields.push(new Field("large", "silo", null, null));
+	resultFields.push(new Field("large", "building", null, null));
+	for (var i = 0; i < (bigfieldnum - 2); i++) {
+		resultFields.push(new Field("large", "irrigation", null, null));
 	}
-	resultfields.push(field("small", "silo"));
-	resultfields.push(field("small", "building"));
-	for (i = 0; i < (smallfieldnum - 2); i++) {
-		resultfields.push(field ("small", "irrigation"))
+	resultFields.push(new Field("small", "silo", null, null));
+	resultFields.push(new Field("small", "building", null, null));
+	for (var j = 0; j < (smallfieldnum - 2); j++) {
+		resultFields.push(new Field ("small", "irrigation", null, null));
 	}
-	return resultfields;
+	return resultFields;
+};
 
-
-
-}
-
-distribute_fields = function(gameID){
-	//*
-	var tempgame = findgame(gameID, validGames);
-	var gamenum = findgamenum(gameID, validGames);
-
-	//need to create new method to retrive game object.
-
-	if (findgame.listOfPlayers.size == 2) {
-		findgame.listOfPlayers[0] = (findgame.listOfPlayers[0].playernum, createfields(8,7));
-		findgame.listOfPlayers[1] = (findgame.listOfPlayers[1].playernum, createfields(8,7));
-		validGames[gamenum] = tempgame;
+var distribute_fields = function(gameID){
+	var tempGame = findGame(gameID, module.exports.validGames);
+	var gameNum = findGameNum(gameID, module.exports.validGames);
+	//Creates a game object with each player having the starting amount of fields
+	if (tempGame.listOfPlayers.length === 2) {
+		tempGame.listOfPlayers[0] = new Player(findGame(gameID, validGames).listOfPlayers[0].playerID, createFields(8,7));
+		tempGame.listOfPlayers[1] = new Player(findGame(gameID, validGames).listOfPlayers[1].playerID, createFields(8,7));
+		validGames[gameNum] = tempGame;
 	}
-	else if (findgame.listOfPlayers.size == 3) {
-		findgame.listOfPlayers[0] = (findgame.listOfPlayers[0].playernum, createfields(7,6).push(field("small", "irrigation")));
-		findgame.listOfPlayers[1] = (findgame.listOfPlayers[1].playernum, createfields(7,6).push(field("small", "irrigation")));
-		findgame.listOfPlayers[2] = (findgame.listOfPlayers[2].playernum, createfields(7,6));
-		validGames[gamenum] = tempgame;
+	else if (tempGame.listOfPlayers.length === 3) {
+		tempGame.listOfPlayers[0] = new Player(findGame(gameID, validGames).listOfPlayers[0].playerID, createFields(7,6).push(new Field("small", "irrigation", null, null)));
+		tempGame.listOfPlayers[1] = new Player(findGame(gameID, validGames).listOfPlayers[1].playerID, createFields(7,6).push(new Field("small", "irrigation", null, null)));
+		tempGame.listOfPlayers[2] = new Player(findGame(gameID, validGames).listOfPlayers[2].playerID, createFields(7,6));
+		validGames[gameNum] = tempGame;
 	}
-	else if (findgame.listOfPlayers.size == 4) {
-		findgame.listOfPlayers[0] = (findgame.listOfPlayers[0].playernum, createfields(6,5).push(field("small", "irrigation")));
-		findgame.listOfPlayers[1] = (findgame.listOfPlayers[1].playernum, createfields(6,5).push(field("small", "irrigation")));
-		findgame.listOfPlayers[2] = (findgame.listOfPlayers[2].playernum, createfields(6,5));
-		findgame.listOfPlayers[3] = (findgame.listOfPlayers[3].playernum, createfields(6,5));
-		validGames[gamenum] = tempgame;
+	else if (tempGame.listOfPlayers.length === 4) {
+		tempGame.listOfPlayers[0] = new Player(findGame(gameID, validGames).listOfPlayers[0].playerID, createFields(6,5).push(new Field("small", "irrigation", null, null)));
+		tempGame.listOfPlayers[1] = new Player(findGame(gameID, validGames).listOfPlayers[1].playerID, createFields(6,5).push(new Field("small", "irrigation", null, null)));
+		tempGame.listOfPlayers[2] = new Player(findGame(gameID, validGames).listOfPlayers[2].playerID, createFields(6,5));
+		tempGame.listOfPlayers[3] = new Player(findGame(gameID, validGames).listOfPlayers[3].playerID, createFields(6,5));
+		validGames[gameNum] = tempGame;
 	}
-	else if (findgame.listOfPlayers.size == 5) {
-		findgame.listOfPlayers[0] = (findgame.listOfPlayers[0].playernum, createfields(5,4).push(field("small", "irrigation")));
-		findgame.listOfPlayers[1] = (findgame.listOfPlayers[1].playernum, createfields(5,4).push(field("small", "irrigation")));
-		findgame.listOfPlayers[2] = (findgame.listOfPlayers[2].playernum, createfields(5,4));
-		findgame.listOfPlayers[3] = (findgame.listOfPlayers[3].playernum, createfields(5,4));
-		findgame.listOfPlayers[4] = (findgame.listOfPlayers[4].playernum, createfields(5,4));
-		validGames[gamenum] = tempgame;
+	else if (tempGame.listOfPlayers.length === 5) {
+		tempGame.listOfPlayers[0].playerFields = createFields(5,4).push(new Field("small", "irrigation", null, null));
+		//tempGame.listOfPlayers[0] = new Player(findGame(gameID, module.exports.validGames).listOfPlayers[0].playerID, createFields(5,4).push(new Field("small", "irrigation", null, null)));
+		tempGame.listOfPlayers[1] = new Player(findGame(gameID, module.exports.validGames).listOfPlayers[1].playerID, createFields(5,4).push(new Field("small", "irrigation", null, null)));
+		tempGame.listOfPlayers[2] = new Player(findGame(gameID, module.exports.validGames).listOfPlayers[2].playerID, createFields(5,4));
+		tempGame.listOfPlayers[3] = new Player(findGame(gameID, module.exports.validGames).listOfPlayers[3].playerID, createFields(5,4));
+ 		module.exports.validGames[gameNum] = tempGame;
 	}
+};
 
 
+//RemoveField will remove the field played from the hand, and add it to the fields played array
+//TODO: change to separate x and y coordinates based on return from UI
+var removeField = function(fsize, ftype, player, xy) {
+	for (var i = 0; i < player.playerFields.length; i++) {
+		if (player.playerFields[i].size === fsize
+			&& player.playerFields[i].type === ftype) {
+			PlayedFields.push(new Field(fsize, ftype, xy));
+			player.playerFields.splice(i, 1);
+		}
+		else return null;
+	}
+};
 
+var findPlayer = function(game, cplayerid) {
+	for (var i = 0; i < game.listOfPlayers.length; i++) {
+		if (game.listOfPlayers[i].playerID === cplayerid) {
+			return game.listOfPlayers[i]
+		}
+		else {
+		}
+	}
+};
 
-
-	//*/
-}
-
-findGame = function(gameID, GameArray) {
-	for (i = 0; i < GameArray.size; i ++) {
-		if (GameArray[i] == gameID) {
+var findGame = function(gameID, GameArray) {
+	//This will find the game object in the game array given the id.
+	for (var i = 0; i < GameArray.length; i ++) {
+		console.log("findGame searching for a game: "+JSON.stringify(GameArray[i],null,4));
+		if (GameArray[i].gameID === gameID) {
+			console.log("findGame found a game: "+gameID);
 			return GameArray[i];
 		}
-		else return null;
+		else {
+			console.log("findGame did not find a game: "+gameID);
+		}
 	}
+};
 
-}
-
-findGamenum = function(gameID, GameArray) {
-	for (i = 0; i < GameArray.size; i ++) {
-		if (GameArray[i] == gameID) {
+var findGameNum = function(gameID, GameArray) {
+	//this will find the position of the game object in a game array.
+	for (var i = 0; i < GameArray.size; i++) {
+		if (GameArray[i] === gameID) {
 			return i;
 		}
-		else return null;
+		else {
+		}
 	}
-
-}
-
-
-// stores all the valid games in a static array
-var validGames = [];
-
-// creates a new GUID and stores the new id in a static array
-function call_create_ID() {
-	var id = helper_create_ID() + helper_create_ID(true) + helper_create_ID(true) + helper_create_ID();
-	validGames.push(new game(id));
-	return id;
 };
 
-// helper function for the create_ID function
-var helper_create_ID = function(s) {
-	var p = (Math.random().toString(16)+"000000000").substr(2,8);
-	return s ? "_" + p.substr(0,4) + "_" + p.substr(4,4) : p ;
-}
-var call_get_time = function() {
-	var currentTime = new Date();
-	return currentTime.getHours().toString()
-		+ ":" + currentTime.getMinutes().toString()
-		+ ":" + currentTime.getSeconds().toString();
+var get_valid_assignments = function(game_id){
+	var currentGame = findGame(game_id);
+	var validAssignments = [];
+	for(var i = 0; i < currentGame.get_assignments(); i++){
+		if(currentGame.get_assignments()[i].contains_tile_size(currentGame.get_fields())) {
+		}
+	}
+	return validAssignments;
 };
 
-
-
-var sysCurrentTime = call_get_time();
-
-console.log(call_get_time());
-
+// creates a new GUID
+var call_create_ID = function() {
+	var helper_create_ID = function(s) {
+		var p = (Math.random().toString(16) + "000000000").substr(2, 8);
+		return s ? "_" + p.substr(0, 4) + "_" + p.substr(4, 4) : p;
+	};
+	return helper_create_ID() + helper_create_ID(true) + helper_create_ID(true) + helper_create_ID();
+};
 
 var call_get_time = function() {
 	var currentTime = new Date();
@@ -258,16 +288,24 @@ var call_get_time = function() {
 		+ ":" + currentTime.getSeconds().toString();
 };
 
-
 var sysCurrentTime = call_get_time();
 
-console.log(call_get_time());
 
+//creates new Field object
+function Field(size, type, x, y) {
+	//need to specifiy size as either large or small
+	this.size = size;
+	//need to specify type as irrigation, silo, or building
+	this.type = type;
+	//The x coordinate will be filled in once played	
+	this.x = x;
+	//The y coordinate will be filled in once played
+	this.y = y;
+}
 
-
-//creates new game object
-function game(gameID, listOfPlayers, turnLimit, startTime, whoseTurn) {
-	//gameID randomly created when player creates new game, or specified when player joins game
+//creates new Game object
+function Game(gameID, listOfPlayers, turnLimit, startTime, whoseTurn) {
+	//gameID randomly created when player creates new Game, or specified when player joins game
 	this.gameID = gameID;
 	//array of all player objects within game - number of player objects created with specified gameID
 	this.listOfPlayers = listOfPlayers;
@@ -277,70 +315,43 @@ function game(gameID, listOfPlayers, turnLimit, startTime, whoseTurn) {
 	this.startTime = startTime;
 	//playerID of the player whose turn it is now
 	this.whoseTurn = whoseTurn;
-	this.currentTime = null;
+	//TODO: Jared, this is where field placement history should go
+	this.fieldsPlayed = [];
 }
 
-//creates a new player object
-function player(playerNum, playerFields) {
-	//playerID specified when player creates new game or when player joins game
-	this.playerNum = playerNum;
-	// an array of Field objects representing the fields owned by each player
-	this.playerFields = playerFields;
-	this.currentTime = sysCurrentTime;
+//creates a new Player object
+function Player(playerID) {
+	//playerID specified when player creates new Game or when player joins game
+	this.playerID = playerID;
+	this.playerFields = [];
+	this.playerAssignments = [];
 }
 
-function get_player(playerID){
-	for(i = 0; i < listOfPlayers.size; i++){
-		if(listOfPlayers[i].id == playerID){
-			return listOfPlayers[i];
-		}
-	}
-	return null;
+
+function get_current_player(gameID) {
+	var theGame = findGame(gameID, validGames);
+	return theGame.whoseTurn;
 }
 
-function get_current_player(){
-	return get_player(get_current_player_id());
+function get_current_player_id(gameID) {
+	var theGame = findGame(gameID, validGames);
+	return theGame.whoseTurn.playerID;
 }
 
-function get_current_player_id(){
-	return whoseTurn;
-}
-
-function advance_turn(){
+function advance_turn(gameID){
+	var theGame = findGame(gameID, validGames);
 	//TODO: Find user_id of next player
 	//TODO: Set whoseTurn equal to the user_id
-	this.whoseTurn = listOfPlayers.indexOf(get_current_player()).next()
+	theGame.whoseTurn = theGame.listOfPlayers.indexOf(get_current_player()).next();
 }
 
-//var name should be gameID with all dashes replaced with underscores
-var xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx = new game("xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx",
-	"player1", ["player1", "player2", "player3", "player4", "player5"], 3.5, "NA", "player1");
-
-//var name should be gameID with all dashes replaced with underscores
-var yyyyyyyy_yyyy_yyyy_yyyy_yyyyyyyyyyyy = new game("yyyyyyyy_yyyy_yyyy_yyyy_yyyyyyyyyyyy",
-	"player6", ["player6"], 5.0, "NA", "player6");
-
-var createGame = function(playerID, turnLimit) {
-	//will initialize a game object and transition creator to "join game" lobby,
-	//where other players will appear when they submit appropriate gameID
-	//will also declare gameID to the creator so others can join
-}
-
-var joinGame = function(userID, gameID) {
-	if (validate_ID_help(gameID) === true) { //call_create_ID.validGames.indexOf(gameID.toString()) > -1) {
-		gameID.listOfPlayers.push(userID);
-		console.log("All players: " + gameID.listOfPlayers);
-	} else {
-		console.log("Error: Invalid game ID. Please try again.");
-	}
-}
-
+/*
 //Needs work
 var startGame = function(game) {
 	game.startTime = sysCurrentTime;
 	console.log("The start time: " + game.startTime);
 	return game.startTime;
-}
+};
 
 //Needs work
 var advanceTurn = function(game) {
@@ -353,48 +364,687 @@ var advanceTurn = function(game) {
 	//	currentPlayer = game.listOfPlayers[]
 	//}
 	console.log("Current player: " + currentPlayer);
-}
-
-//startGame(yyyyyyyy_yyyy_yyyy_yyyy_yyyyyyyyyyyy);
-//fix valid id array so that id pushing does not occur only when random GUID is generated
-
-/* Commenting out so we can compile -djp3
-
-call_create_ID.validGames.push("yyyyyyyy_yyyy_yyyy_yyyy_yyyyyyyyyyyy", ["player6"], 5.0, "NA", "player6");
-call_create_ID.validGames.push("yyyyyyyy_yyyy_yyyy_yyyy_yyyyyyyyyyyy");
-console.log("Should be true: " + validate_ID_help("yyyyyyyy_yyyy_yyyy_yyyy_yyyyyyyyyyyy"));
-//yyyyyyyy_yyyy_yyyy_yyyy_yyyyyyyyyyyy.listOfPlayers.push("test player");
-console.log("Test players: " + yyyyyyyy_yyyy_yyyy_yyyy_yyyyyyyyyyyy.listOfPlayers);
-joinGame("new player", yyyyyyyy_yyyy_yyyy_yyyy_yyyyyyyyyyyy)
-advanceTurn(yyyyyyyy_yyyy_yyyy_yyyy_yyyyyyyyyyyy);
+};
 */
 
+var minor_assignments = [[{type:"small", x:0, y:0}, {type:"small", x:1, y:0}, {type:"small", x:2, y:0}],
+	[{type:"large", x:0, y:0}, {type:"small", x:2, y:0}, {type:"small", x:2, y:1}],
+	[{type:"small", x:0, y:1}, {type:"small", x:0, y:2}, {type:"large", x:1, y:0}],
+	[{type:"small", x:0, y:0}, {type:"small", x:0, y:1}, {type:"large", x:1, y:1}],
+	[{type:"small", x:0, y:1}, {type:"small", x:1, y:0}, {type:"large", x:1, y:1}],
+	[{type:"small", x:0, y:1}, {type:"small", x:2, y:0}, {type:"large", x:1, y:1}],
+	[{type:"small", x:0, y:0}, {type:"large", x:1, y:0}, {type:"small", x:2, y:2}],
+	[{type:"small", x:0, y:1}, {type:"large", x:1, y:0}, {type:"small", x:2, y:2}],
+	[{type:"small", x:0, y:0}, {type:"small", x:0, y:1}, {type:"small", x:1, y:0}],
+	[{type:"small", x:0, y:0}, {type:"small", x:1, y:0}, {type:"large", x:2, y:0}],
+	[{type:"small", x:0, y:1}, {type:"small", x:1, y:1}, {type:"large", x:2, y:0}],
+	[{type:"small", x:0, y:0}, {type:"large", x:1, y:0}, {type:"small", x:3, y:0}],
+	[{type:"small", x:0, y:1}, {type:"large", x:1, y:0}, {type:"small", x:3, y:0}],
+	[{type:"small", x:0, y:0}, {type:"large", x:1, y:0}, {type:"small", x:3, y:1}],
+	[{type:"large", x:0, y:1}, {type:"large", x:2, y:1}, {type:"small", x:3, y:0}],
+	[{type:"small", x:0, y:0}, {type:"large", x:0, y:1}, {type:"large", x:2, y:1}],
+	[{type:"large", x:0, y:1}, {type:"large", x:2, y:1}, {type:"small", x:2, y:0}],
+	[{type:"small", x:1, y:0}, {type:"large", x:0, y:1}, {type:"large", x:2, y:1}],
+	[{type:"large", x:0, y:2}, {type:"large", x:2, y:0}, {type:"small", x:2, y:2}],
+	[{type:"large", x:0, y:0}, {type:"large", x:2, y:1}, {type:"small", x:3, y:0}],
+	[{type:"small", x:0, y:0}, {type:"large", x:0, y:1}, {type:"large", x:2, y:0}],
+	[{type:"large", x:0, y:0}, {type:"small", x:2, y:0}, {type:"large", x:2, y:1}],
+	[{type:"small", x:1, y:0}, {type:"large", x:0, y:1}, {type:"large", x:2, y:0}],
+	[{type:"small", x:1, y:0}, {type:"large", x:0, y:1}, {type:"large", x:2, y:2}],
+	[{type:"small", x:2, y:0}, {type:"large", x:0, y:2}, {type:"large", x:2, y:1}],
+	[{type:"small", x:0, y:0}, {type:"large", x:0, y:1}, {type:"large", x:2, y:2}],
+	[{type:"large", x:0, y:2}, {type:"large", x:2, y:1}, {type:"small", x:3, y:0}],
+	[{type:"large", x:0, y:0}, {type:"large", x:2, y:0}, {type:"large", x:2, y:2}],
+	[{type:"large", x:0, y:0}, {type:"large", x:2, y:0}, {type:"large", x:1, y:2}]
+];
+
+
+var major_assignments = [[{type:"small", x:0, y:1}, {type:"small", x:1, y:0}, {type:"small", x:1, y:1}, {type:"small", x:2, y:1}],
+	[{type:"small", x:0, y:0}, {type:"small", x:0, y:1}, {type:"small", x:1, y:1}, {type:"small", x:2, y:1}],
+	[{type:"small", x:0, y:1}, {type:"small", x:1, y:1}, {type:"small", x:2, y:1}, {type:"small", x:2, y:0}],
+	[{type:"small", x:0, y:0}, {type:"small", x:1, y:0}, {type:"small", x:1, y:1}, {type:"small", x:2, y:1}],
+	[{type:"small", x:0, y:1}, {type:"small", x:1, y:1}, {type:"small", x:1, y:0}, {type:"small", x:2, y:0}],
+	[{type:"large", x:0, y:1}, {type:"small", x:2, y:2}, {type:"small", x:2, y:1}, {type:"small", x:2, y:0}],
+	[{type:"small", x:0, y:0}, {type:"small", x:0, y:1}, {type:"small", x:0, y:2}, {type:"large", x:1, y:1}],
+	[{type:"large", x:0, y:0}, {type:"small", x:2, y:0}, {type:"small", x:2, y:1}, {type:"small", x:1, y:2}],
+	[{type:"small", x:0, y:0}, {type:"small", x:0, y:1}, {type:"large", x:1, y:0}, {type:"small", x:1, y:2}],
+	[{type:"large", x:0, y:0}, {type:"small", x:0, y:2}, {type:"small", x:2, y:0}, {type:"small", x:2, y:1}],
+	[{type:"small", x:0, y:0}, {type:"small", x:0, y:1}, {type:"large", x:1, y:0}, {type:"small", x:2, y:2}],
+	[{type:"small", x:0, y:1}, {type:"small", x:0, y:2}, {type:"large", x:1, y:0}, {type:"small", x:2, y:2}],
+	[{type:"large", x:0, y:0}, {type:"small", x:0, y:2}, {type:"small", x:2, y:1}, {type:"small", x:2, y:2}],
+	[{type:"small", x:0, y:1}, {type:"small", x:0, y:2}, {type:"large", x:1, y:0}, {type:"small", x:1, y:2}],
+	[{type:"small", x:0, y:0}, {type:"small", x:1, y:0}, {type:"small", x:0, y:1}, {type:"small", x:1, y:1}],
+	[{type:"small", x:0, y:0}, {type:"small", x:1, y:0}, {type:"small", x:2, y:0}, {type:"small", x:3, y:0}],
+	[{type:"small", x:0, y:0}, {type:"small", x:0, y:1}, {type:"small", x:1, y:1}, {type:"large", x:2, y:1}],
+	[{type:"large", x:0, y:1}, {type:"small", x:2, y:1}, {type:"small", x:3, y:1}, {type:"small", x:3, y:0}],
+	[{type:"small", x:0, y:1}, {type:"small", x:1, y:1}, {type:"small", x:1, y:0}, {type:"large", x:2, y:1}],
+	[{type:"large", x:0, y:1}, {type:"small", x:2, y:1}, {type:"small", x:2, y:0}, {type:"small", x:3, y:1}],
+	[{type:"small", x:0, y:1}, {type:"small", x:1, y:1}, {type:"small", x:2, y:0}, {type:"large", x:2, y:1}],
+	[{type:"large", x:0, y:1}, {type:"small", x:1, y:0}, {type:"small", x:2, y:1}, {type:"small", x:3, y:1}],
+	[{type:"small", x:0, y:1}, {type:"small", x:1, y:1}, {type:"large", x:2, y:1}, {type:"small", x:3, y:0}],
+	[{type:"small", x:0, y:0}, {type:"large", x:0, y:1}, {type:"small", x:2, y:1}, {type:"small", x:3, y:1}],
+	[{type:"small", x:0, y:0}, {type:"small", x:1, y:0}, {type:"large", x:2, y:0}, {type:"small", x:3, y:2}],
+	[{type:"large", x:0, y:0}, {type:"small", x:0, y:2}, {type:"small", x:2, y:0}, {type:"small", x:3, y:0}],
+	[{type:"small", x:0, y:0}, {type:"small", x:1, y:0}, {type:"large", x:2, y:0}, {type:"small", x:2, y:2}],
+	[{type:"large", x:0, y:0}, {type:"small", x:1, y:2}, {type:"small", x:2, y:0}, {type:"small", x:3, y:0}],
+	[{type:"small", x:0, y:0}, {type:"small", x:1, y:0}, {type:"small", x:1, y:1}, {type:"large", x:2, y:0}],
+	[{type:"large", x:0, y:0}, {type:"small", x:2, y:0}, {type:"small", x:2, y:1}, {type:"small", x:3, y:0}],
+	[{type:"small", x:0, y:0}, {type:"small", x:1, y:0}, {type:"small", x:0, y:1}, {type:"large", x:2, y:0}],
+	[{type:"large", x:0, y:0}, {type:"small", x:2, y:0}, {type:"small", x:3, y:0}, {type:"small", x:3, y:1}],
+	[{type:"small", x:0, y:1}, {type:"large", x:1, y:0}, {type:"small", x:3, y:0}, {type:"small", x:3, y:1}],
+	[{type:"small", x:0, y:0}, {type:"small", x:0, y:1}, {type:"large", x:1, y:0}, {type:"small", x:3, y:1}],
+	[{type:"small", x:0, y:1}, {type:"small", x:1, y:0}, {type:"large", x:1, y:1}, {type:"small", x:3, y:1}],
+	[{type:"small", x:0, y:1}, {type:"small", x:2, y:0}, {type:"large", x:1, y:1}, {type:"small", x:3, y:1}],
+	[{type:"small", x:0, y:1}, {type:"small", x:3, y:1}, {type:"large", x:1, y:1}, {type:"small", x:3, y:0}],
+	[{type:"small", x:0, y:0}, {type:"small", x:0, y:1}, {type:"large", x:1, y:1}, {type:"small", x:3, y:1}],
+	[{type:"small", x:0, y:0}, {type:"large", x:1, y:0}, {type:"small", x:3, y:0}, {type:"small", x:2, y:2}],
+	[{type:"small", x:0, y:0}, {type:"large", x:1, y:0}, {type:"small", x:3, y:0}, {type:"small", x:1, y:2}],
+	[{type:"small", x:0, y:1}, {type:"large", x:1, y:0}, {type:"small", x:2, y:2}, {type:"small", x:3, y:0}],
+	[{type:"small", x:0, y:0}, {type:"large", x:1, y:0}, {type:"small", x:1, y:2}, {type:"small", x:3, y:1}],
+	[{type:"small", x:0, y:1}, {type:"large", x:1, y:0}, {type:"small", x:1, y:2}, {type:"small", x:3, y:0}],
+	[{type:"small", x:0, y:0}, {type:"large", x:1, y:0}, {type:"small", x:2, y:2}, {type:"small", x:3, y:1}],
+	[{type:"small", x:0, y:1}, {type:"small", x:0, y:2}, {type:"large", x:1, y:0}, {type:"small", x:3, y:0}],
+	[{type:"small", x:0, y:0}, {type:"large", x:1, y:0}, {type:"small", x:3, y:1}, {type:"small", x:3, y:2}],
+	[{type:"small", x:0, y:2}, {type:"small", x:0, y:3}, {type:"large", x:1, y:1}, {type:"small", x:1, y:0}],
+	[{type:"large", x:0, y:1}, {type:"small", x:1, y:0}, {type:"small", x:2, y:2}, {type:"small", x:2, y:3}],
+	[{type:"small", x:0, y:2}, {type:"small", x:0, y:3}, {type:"large", x:1, y:1}, {type:"small", x:2, y:0}],
+	[{type:"small", x:0, y:0}, {type:"large", x:0, y:1}, {type:"small", x:2, y:2}, {type:"small", x:2, y:3}],
+	[{type:"small", x:0, y:1}, {type:"large", x:1, y:0}, {type:"small", x:0, y:2}, {type:"small", x:0, y:3}],
+	[{type:"large", x:0, y:0}, {type:"small", x:2, y:1}, {type:"small", x:2, y:2}, {type:"small", x:2, y:3}],
+	[{type:"small", x:0, y:2}, {type:"large", x:2, y:0}, {type:"small", x:1, y:1}, {type:"small", x:1, y:2}],
+	[{type:"large", x:0, y:1}, {type:"large", x:3, y:0}, {type:"large", x:2, y:2}, {type:"large", x:1, y:4}],
+	[{type:"large", x:0, y:0}, {type:"large", x:1, y:2}, {type:"large", x:1, y:4}, {type:"large", x:3, y:1}],
+	[{type:"large", x:0, y:1}, {type:"large", x:3, y:0}, {type:"large", x:2, y:2}, {type:"large", x:4, y:2}],
+	[{type:"large", x:0, y:0}, {type:"large", x:0, y:2}, {type:"large", x:0, y:4}, {type:"large", x:2, y:3}],
+	[{type:"large", x:0, y:0}, {type:"large", x:0, y:2}, {type:"large", x:2, y:1}, {type:"large", x:4, y:1}],
+	[{type:"large", x:0, y:1}, {type:"large", x:2, y:0}, {type:"large", x:2, y:2}, {type:"large", x:4, y:3}],
+	[{type:"large", x:0, y:1}, {type:"large", x:2, y:0}, {type:"large", x:2, y:2}, {type:"large", x:4, y:1}],
+	[{type:"large", x:0, y:3}, {type:"large", x:2, y:0}, {type:"large", x:2, y:2}, {type:"large", x:4, y:2}],
+	[{type:"large", x:0, y:3}, {type:"large", x:2, y:0}, {type:"large", x:2, y:2}, {type:"large", x:4, y:3}],
+	[{type:"large", x:0, y:0}, {type:"large", x:0, y:2}, {type:"large", x:2, y:3}, {type:"large", x:4, y:3}],
+	[{type:"large", x:0, y:4}, {type:"large", x:2, y:0}, {type:"large", x:2, y:2}, {type:"large", x:2, y:4}],
+	[{type:"large", x:0, y:0}, {type:"large", x:0, y:2}, {type:"large", x:0, y:4}, {type:"large", x:2, y:2}],
+	[{type:"large", x:0, y:2}, {type:"large", x:2, y:1}, {type:"large", x:4, y:0}, {type:"small", x:6, y:1}],
+	[{type:"small", x:0, y:2}, {type:"large", x:1, y:1}, {type:"large", x:3, y:0}, {type:"large", x:5, y:0}],
+	[{type:"large", x:0, y:1}, {type:"large", x:2, y:0}, {type:"large", x:4, y:1}, {type:"small", x:6, y:2}],
+	[{type:"large", x:0, y:0}, {type:"large", x:2, y:0}, {type:"large", x:4, y:0}, {type:"small", x:6, y:0}],
+	[{type:"large", x:0, y:0}, {type:"small", x:2, y:1}, {type:"large", x:3, y:1}, {type:"large", x:5, y:2}],
+	[{type:"large", x:0, y:1}, {type:"large", x:2, y:0}, {type:"small", x:4, y:1}, {type:"large", x:5, y:0}],
+	[{type:"large", x:0, y:0}, {type:"small", x:2, y:0}, {type:"large", x:3, y:0}, {type:"large", x:5, y:0}],
+	[{type:"large", x:0, y:1}, {type:"large", x:2, y:2}, {type:"large", x:3, y:0}, {type:"large", x:5, y:1}],
+	[{type:"large", x:0, y:0}, {type:"large", x:0, y:2}, {type:"large", x:0, y:4}, {type:"large", x:2, y:5}],
+	[{type:"large", x:0, y:5}, {type:"large", x:2, y:2}, {type:"large", x:2, y:4}, {type:"large", x:3, y:0}],
+	[{type:"large", x:0, y:0}, {type:"large", x:0, y:2}, {type:"large", x:2, y:3}, {type:"large", x:2, y:5}],
+	[{type:"large", x:0, y:5}, {type:"large", x:1, y:3}, {type:"large", x:3, y:0}, {type:"large", x:3, y:2}]
+];
+
+
+var distribute_assignments_at_start = function(gameID){
+	var global_small_assignments_chosen = [];
+	var global_large_assignments_chosen = [];
+	var tempGame = findGame(gameID, module.exports.validGames);
+	for (var i = 0; i < tempGame.listOfPlayers.size; i++) {
+		var small_assignments_chosen = distribute_small_assignments_for_player(tempGame.listOfPlayers.size, global_small_assignments_chosen);
+		var large_assignments_chosen = distribute_large_assignments_for_player(tempGame.listOfPlayers.size, global_large_assignments_chosen);
+		// keep track of the small and large assignments already chosen
+		for (var j = 0; j < small_assignments_chosen.size; j++){
+			global_small_assignments_chosen.push(small_assignments_chosen[j]);
+		}
+		for (var k = 0; k < large_assignments_chosen.size; k++){
+			global_large_assignments_chosen.push(large_assignments_chosen[j]);
+		}
+		tempGame.listOfPlayers[i].playerAssignments = small_assignments_chosen.concat(large_assignments_chosen);
+	}
+};
+
+var distribute_small_assignments_for_player = function(size_of_game, assignments_already_chosen){
+	var tempRandomNum = -1;
+	var small_assignments = [];
+	var assignments_chosen = assignments_already_chosen;
+	if (size_of_game == 3){
+		for (var i = 0; i < 6; i++){
+			tempRandomNum = getRandomInt(0,minor_assignments.size);
+			if (assignments_chosen.indexOf(minor_assignments[tempRandomNum]) > -1){
+				i--;
+			}
+			else {
+				small_assignments.push(minor_assignments[tempRandomNum]);
+				assignments_chosen.push(minor_assignments[tempRandomNum]);
+			}
+		}
+	}
+	if (size_of_game == 4){
+		for (var j = 0; j < 5; j++){
+			tempRandomNum = getRandomInt(0,minor_assignments.size);
+			if (assignments_chosen.indexOf(minor_assignments[tempRandomNum]) > -1){
+				j--;
+			}
+			else {
+				small_assignments.push(minor_assignments[tempRandomNum]);
+				assignments_chosen.push(minor_assignments[tempRandomNum]);
+			}
+		}
+	}
+	if (size_of_game == 5){
+		for (var k = 0; k < 4; k++){
+			tempRandomNum = getRandomInt(0,minor_assignments.size);
+			if (assignments_chosen.indexOf(minor_assignments[tempRandomNum]) > -1){
+				k--;
+			}
+			else {
+				small_assignments.push(minor_assignments[tempRandomNum]);
+				assignments_chosen.push(minor_assignments[tempRandomNum]);
+			}
+		}
+	}
+	return small_assignments;
+};
+
+var distribute_large_assignments_for_player = function(size_of_game, assignments_already_chosen){
+	var tempRandomNum = -1;
+	var large_assignments = [];
+	var assignments_chosen = assignments_already_chosen;
+	if (size_of_game == 3){
+		for (var i = 0; i < 7; i++){
+			tempRandomNum = getRandomInt(0,major_assignments.size);
+			if (assignments_chosen.indexOf(major_assignments[tempRandomNum]) > -1){
+				i--;
+			}
+			else {
+				large_assignments.push(major_assignments[tempRandomNum]);
+				assignments_chosen.push(major_assignments[tempRandomNum]);
+			}
+		}
+	}
+	if (size_of_game == 4){
+		for (var j = 0; j < 6; j++){
+			tempRandomNum = getRandomInt(0,major_assignments.size);
+			if (assignments_chosen.indexOf(major_assignments[tempRandomNum]) > -1){
+				j--;
+			}
+			else {
+				large_assignments.push(major_assignments[tempRandomNum]);
+				assignments_chosen.push(major_assignments[tempRandomNum]);
+			}
+		}
+	}
+	if (size_of_game == 5){
+		for (var k = 0; k < 5; k++){
+			tempRandomNum = getRandomInt(0,major_assignments.size);
+			if (assignments_chosen.indexOf(major_assignments[tempRandomNum]) > -1){
+				k--;
+			}
+			else {
+				large_assignments.push(major_assignments[tempRandomNum]);
+				assignments_chosen.push(major_assignments[tempRandomNum]);
+			}
+		}
+	}
+	return large_assignments;
+};
+
+/**
+ * Returns a random number between min (inclusive) and max (exclusive)
+ */
+function getRandomInt(min, max) {
+	return Math.floor(Math.random() * (max - min)) + min;
+}
+
+
+
+function Coordinates(x, y) {
+	this.x = x;
+	this.y = y;
+}
+
+var allCoordinates = function() {
+	var theCoordinates = [];
+	for (var i = 50; i > -51; i--) {
+		for (var j = 50; j > -51; j--) {
+			theCoordinates.push(new Coordinates(i, j));
+			//Below will print array of all existing coordinates in a 50x50 board
+			//console.log(i + ", " + j);
+		}
+	}
+	return theCoordinates;
+};
+
+var greaterFieldBound = function(fieldArray) {
+	var theGreaterBound = new Coordinates(0, 0);
+	for (var i = 0; i < fieldArray.length; i++) {
+		if (fieldArray[i].size === "small") {
+			theGreaterBound.x = Math.max(theGreaterBound.x, (fieldArray[i].x + 1));
+			theGreaterBound.y = Math.max(theGreaterBound.y, (fieldArray[i].y + 1));
+		}
+		else if (fieldArray[i].size === "large") {
+			theGreaterBound.x = Math.max(theGreaterBound.x, (fieldArray[i].x + 2));
+			theGreaterBound.y = Math.max(theGreaterBound.y, (fieldArray[i].y + 2));
+		}
+	}
+	return theGreaterBound;
+};
+
+var lesserFieldBoundLarge = function(fieldArray) {
+	var theLesserBound = new Coordinates (0, 0);
+	for (var i = 0; i < fieldArray.length; i++) {
+		theLesserBound.x = Math.min(theLesserBound.x, (fieldArray[i].x - 2));
+		theLesserBound.y = Math.min(theLesserBound.y, (fieldArray[i].y - 2));
+	}
+	return theLesserBound;
+};
+
+var lesserFieldBoundSmall = function(fieldArray) {
+	var theLesserBound = new Coordinates (0, 0);
+	for (var i = 0; i < fieldArray.length; i++) {
+		theLesserBound.x = Math.min(theLesserBound.x, (fieldArray[i].x - 1));
+		theLesserBound.y = Math.min(theLesserBound.y, (fieldArray[i].y - 1));
+	}
+	return theLesserBound;
+};
+
+var checkAdjacentLarge = function(proposedCoordinates, placedFields) {
+	var adjacentCoordinates = [];
+	for (var i = 0; i < proposedCoordinates.length; i++) {
+		for (var j = 0; j < placedFields.length; j++) {
+			if (placedFields[j].size == "large") {
+				for (var k = 2; k >= 0; k--) {
+					for (var l = 2; l >= 0; l--) {
+						if (proposedCoordinates[i].x == (placedFields[j].x + k)
+							&& proposedCoordinates[i].y == (placedFields[j].y + l)) {
+							adjacentCoordinates.push(proposedCoordinates[i]);
+						}
+						else if (proposedCoordinates[i].x == (placedFields[j].x - k)
+							&& proposedCoordinates[i].y == (placedFields[j].y - l)) {
+							adjacentCoordinates.push(proposedCoordinates[i]);
+						}
+						else if (proposedCoordinates[i].x == (placedFields[j].x + k)
+							&& proposedCoordinates[i].y == (placedFields[j].y - l)) {
+							adjacentCoordinates.push(proposedCoordinates[i]);
+						}
+						else if (proposedCoordinates[i].x == (placedFields[j].x - k)
+							&& proposedCoordinates[i].y == (placedFields[j].y + l)) {
+							adjacentCoordinates.push(proposedCoordinates[i]);
+						}
+					}
+				}
+			}
+			else if (placedFields[j].size == "small") {
+				for (var m = 1; m >= 0; m--) {
+					for (var n = 1; n >= 0; n--) {
+						if (proposedCoordinates[i].x == (placedFields[j].x + m)
+							&& proposedCoordinates[i].y == (placedFields[j].y + n)) {
+							adjacentCoordinates.push(proposedCoordinates[i]);
+						}
+						else if (proposedCoordinates[i].x == (placedFields[j].x - m)
+							&& proposedCoordinates[i].y == (placedFields[j].y - n)) {
+							adjacentCoordinates.push(proposedCoordinates[i]);
+						}
+						else if (proposedCoordinates[i].x == (placedFields[j].x + m)
+							&& proposedCoordinates[i].y == (placedFields[j].y - n)) {
+							adjacentCoordinates.push(proposedCoordinates[i]);
+						}
+						else if (proposedCoordinates[i].x == (placedFields[j].x - m)
+							&& proposedCoordinates[i].y == (placedFields[j].y + n)) {
+							adjacentCoordinates.push(proposedCoordinates[i]);
+						}
+					}
+				}
+			}
+		}
+	}
+	//The following will loop through the array that results from the above code and remove duplicate values
+	var cleanedArray = [];
+	for (var g = 0; g < adjacentCoordinates.length; g++) {
+		var valueIsInArray = false;
+		for (var h = 0; h < cleanedArray.length; h++) {
+			if (cleanedArray[h] == adjacentCoordinates[g]) {
+				valueIsInArray = true;
+			}
+		}
+		if (valueIsInArray) {
+			adjacentCoordinates.splice(g--, 1);
+		}
+		else {
+			cleanedArray.push(adjacentCoordinates[g]);
+		}
+	}
+	return cleanedArray;
+};
+
+var checkAdjacentSmall = function(proposedCoordinates, placedFields) {
+	var adjacentCoordinates = [];
+	for (var i = 0; i < proposedCoordinates.length; i++) {
+		for (var j = 0; j < placedFields.length; j++) {
+			if (placedFields[j].size == "large") {
+				for (k = 2; k >= 0; k--) {
+					for (l = 2; l >= 0; l--) {
+						if (proposedCoordinates[i].x == (placedFields[j].x + k)
+							&& proposedCoordinates[i].y == (placedFields[j].y + l)) {
+							adjacentCoordinates.push(proposedCoordinates[i]);
+						}
+						else if (proposedCoordinates[i].x == (placedFields[j].x - 1)
+							&& proposedCoordinates[i].y == (placedFields[j].y - 1)) {
+							adjacentCoordinates.push(proposedCoordinates[i]);
+						}
+						else if (proposedCoordinates[i].x == (placedFields[j].x + k)
+							&& proposedCoordinates[i].y == (placedFields[j].y - 1)) {
+							adjacentCoordinates.push(proposedCoordinates[i]);
+						}
+						else if (proposedCoordinates[i].x == (placedFields[j].x - 1)
+							&& proposedCoordinates[i].y == (placedFields[j].y + l)) {
+							adjacentCoordinates.push(proposedCoordinates[i]);
+						}
+					}
+				}
+			}
+			else if (placedFields[j].size == "small") {
+				for (var k = 1; k >= 0; k--) {
+					for (var l = 1; l >= 0; l--) {
+						if (proposedCoordinates[i].x == (placedFields[j].x + k)
+							&& proposedCoordinates[i].y == (placedFields[j].y + l)) {
+							adjacentCoordinates.push(proposedCoordinates[i]);
+						}
+						else if (proposedCoordinates[i].x == (placedFields[j].x - k)
+							&& proposedCoordinates[i].y == (placedFields[j].y - l)) {
+							adjacentCoordinates.push(proposedCoordinates[i]);
+						}
+						else if (proposedCoordinates[i].x == (placedFields[j].x + k)
+							&& proposedCoordinates[i].y == (placedFields[j].y - l)) {
+							adjacentCoordinates.push(proposedCoordinates[i]);
+						}
+						else if (proposedCoordinates[i].x == (placedFields[j].x - k)
+							&& proposedCoordinates[i].y == (placedFields[j].y + l)) {
+							adjacentCoordinates.push(proposedCoordinates[i]);
+						}
+					}
+				}
+			}
+		}
+	}
+	//The following will loop through the array that results from the above code and remove duplicate values
+	var cleanedArray = [];
+	for (var m = 0; m < adjacentCoordinates.length; m++) {
+		var valueIsInArray = false;
+		for (var n = 0; n < cleanedArray.length; n++) {
+			if (cleanedArray[n] == adjacentCoordinates[m]) {
+				valueIsInArray = true;
+			}
+		}
+		if (valueIsInArray) {
+			adjacentCoordinates.splice(m--, 1);
+		}
+		else {
+			cleanedArray.push(adjacentCoordinates[m]);
+		}
+	}
+	return cleanedArray;
+};
+
+
+
+var valid_large_fields = function(gameID) {
+	var theGame = findGame(gameID, module.exports.validGames);
+	//array validMoves stores coordinates objects
+	var validMoves = allCoordinates();
+	//array containing only (0, 0)
+	var firstValidMove = [].push(new Coordinates(0, 0));
+	//calculates theGreaterBound of a current game board
+	var theGreaterBound = greaterFieldBound(theGame.fieldsPlayed);
+	//calculates theLesserBound of a current game board
+	var theLesserBound = lesserFieldBoundLarge(theGame.fieldsPlayed);
+
+	//this if returns (0, 0) if no fields have yet been played
+	if (theGame.fieldsPlayed.length < 1) {
+		return firstValidMove;
+	}
+	//else checks for every instance other than above base case
+	else {
+		//this for loop moves through all coordinates on board
+		for (var i = 0; i < validMoves.length; i++) {
+			var theX = validMoves[i].x;
+			var theY = validMoves[i].y;
+			//this if checks to remove all coordinates that contain an x or y > 48
+			if (theX > 48) {
+				delete(validMoves[i]);
+			}
+			else if (theY > 48) {
+				delete(validMoves[i]);
+			}
+			//this if checks to remove all coordinates greater than the current greaterFieldBound
+			else if (theX > theGreaterBound.x
+				|| theY > theGreaterBound.y) {
+				delete (validMoves[i]);
+			}
+			//this if checks to remove all coordinates lower than the current lesserFieldBound
+			else if (theX < theLesserBound.x
+				|| theY < theLesserBound.y) {
+				delete (validMoves[i]);
+			}
+			//this for loop moves through the array of all fields that have already been placed
+			for (var j = 0; j < theGame.fieldsPlayed.length; j++) {
+				var playedX = theGame.fieldsPlayed[j].x;
+				var playedY = theGame.fieldsPlayed[j].y;
+				//this if checks to remove all coordinates that have already been played
+				if (
+					theX == theGame.fieldsPlayed[j].x
+					&& theY == theGame.fieldsPlayed[j].y
+				) {
+					delete (validMoves[i]);
+				}
+				//this if checks to remove all coordinates that would be inside an already placed large field
+				else if (
+					(
+						theGame.fieldsPlayed[j].size == "large"
+						&& theX == (playedX + 1)
+						&& theY == (playedY + 1)
+					)
+					|| (theGame.fieldsPlayed[j].size == "large"
+						&& theX == playedX
+						&& theY == (playedY + 1)
+					)
+					|| (theGame.fieldsPlayed[j].size == "large"
+						&& theX == (playedX + 1)
+						&& theY == playedY
+					)
+				) {
+					delete (validMoves[i]);
+				}
+				else if (
+					(
+						theGame.fieldsPlayed[j].size == "small"
+						&& theX == (playedX - 1)
+						&& theY == (playedY - 1)
+					)
+					|| (theGame.fieldsPlayed[j].size == "small"
+						&& theX == (playedX - 1)
+						&& theY == (playedY)
+					)
+					|| (theGame.fieldsPlayed[j].size == "small"
+						&& theX == (playedX)
+						&& theY == (playedY - 1)
+					)
+				) {
+					delete (validMoves[i]);
+				}
+				//this if checks to remove all coordinates that would allow a placed large field to overlap an existing
+				//large field's upper right or lower left corner (i.e. non-coordinate or non-boundary corners)
+
+				else if (
+					(
+						theGame.fieldsPlayed[j].size == "large"
+						&& theX == (playedX + 1)
+						&& theY == (playedY - 1)
+					)
+					|| (theGame.fieldsPlayed[j].size == "large"
+						&& theX == (playedX - 1)
+						&& theY == (playedY + 1)
+					)
+					|| (theGame.fieldsPlayed[j].size == "large"
+						&& theX == (playedX - 1)
+						&& theY == (playedY - 1)
+					)
+					|| (theGame.fieldsPlayed[j].size == "large"
+						&& theX == playedX
+						&& theY == (playedY - 1)
+					)
+					|| (theGame.fieldsPlayed[j].size == "large"
+						&& theX == playedX
+						&& theY == (playedY + 1)
+					)
+					|| (theGame.fieldsPlayed[j].size == "large"
+						&& theX == (playedX + 1)
+						&& theY == playedY
+					)
+					|| (theGame.fieldsPlayed[j].size == "large"
+						&& theX == (playedX - 1)
+						&& theY == playedY
+					)
+				) {
+					delete (validMoves[i]);
+				}
+			}
+		}
+		validMoves = validMoves.filter(function(n){ return n != undefined});
+		return checkAdjacentLarge(validMoves, theGame.fieldsPlayed);
+	}
+};
 
 
 
 
 
+var valid_small_fields = function(gameID) {
+	var theGame = findGame(gameID, module.exports.validGames);
+	//array validMoves stores coordinates objects
+	var validMoves = allCoordinates();
+	//array containing only (0, 0)
+	var firstValidMove = [].push(new Coordinates(0, 0));
+	//calculates theGreaterBound of a current game board
+	var theGreaterBound = greaterFieldBound(theGame.fieldsPlayed);
+	//calculates theLesserBound of a current game board
+	var theLesserBound = lesserFieldBoundSmall(theGame.fieldsPlayed);
 
-/*
+	//this if returns (0, 0) if no fields have yet been played
+	if (theGame.fieldsPlayed.length < 1) {
+		return firstValidMove;
+	}
+	//else checks for every instance other than above base case
+	else {
+		//this for loop moves through all coordinates on board
+		for (var i = 0; i < validMoves.length; i++) {
+			var theX = validMoves[i].x;
+			var theY = validMoves[i].y;
+			//this if checks to remove all coordinates that contain an x or y > 48
+			if (theX > 49) {
+				delete(validMoves[i]);
+			}
+			else if (theY > 49) {
+				delete(validMoves[i]);
+			}
+			//this if checks to remove all coordinates greater than the current greaterFieldBound
+			else if (theX > theGreaterBound.x
+				|| theY > theGreaterBound.y) {
+				delete (validMoves[i]);
+			}
+			//this if checks to remove all coordinates lower than the current lesserFieldBound
+			else if (theX < theLesserBound.x
+				|| theY < theLesserBound.y) {
+				delete (validMoves[i]);
+			}
+			//this for loop moves through the array of all fields that have already been placed
+			for (var j = 0; j < theGame.fieldsPlayed.length; j++) {
+				var playedX = theGame.fieldsPlayed[j].x;
+				var playedY = theGame.fieldsPlayed[j].y;
+				//this if checks to remove all coordinates that have already been played
+				if (
+					theX == theGame.fieldsPlayed[j].x
+					&& theY == theGame.fieldsPlayed[j].y
+				) {
+					delete (validMoves[i]);
+				}
+				//this if checks to remove all coordinates that would be inside an already placed large field
+				else if (
+					(
+						theGame.fieldsPlayed[j].size == "large"
+						&& theX == (playedX + 1)
+						&& theY == (playedY + 1)
+					)
+					|| (theGame.fieldsPlayed[j].size == "large"
+						&& theX == playedX
+						&& theY == (playedY + 1)
+					)
+					|| (theGame.fieldsPlayed[j].size == "large"
+						&& theX == (playedX + 1)
+						&& theY == playedY
+					)
+				) {
+					delete (validMoves[i]);
+				}
+			}
+		}
+		validMoves = validMoves.filter(function(n){ return n != undefined});
+		return checkAdjacentSmall(validMoves, theGame.fieldsPlayed);
+	}
+};
 
- var player1 = new player("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
- "Player 1", "red", true);
 
- var player2 = new player("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
- "Player 2", "blue", false);
 
- var player3 = new player("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
- "Player 3", "green", false);
+var player1 = new Player("firstp");
+var player2 = new Player("secondp");
+var player3 = new Player("thirdp");
+var player4 = new Player("fourthp");
+var player5 = new Player("fifthp");
 
- var player4 = new player("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
- "Player 4", "yellow", false);
+var field1 = new Field("large", "silo", 0, 0);
+var field2 = new Field("large", "silo", 1, 2);
+var field3 = new Field("large", "building", 2, 0);
+var field4 = new Field("small", "building", 0, 3);
+var field5 = new Field("small", "silo", 0, 2);
+var field6 = new Field("large", "irrigation", -2, 2);
 
- var player5 = new player("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
- "Player 5", "purple", false);
+var xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx = new Game("xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx",
+	[player1, player2, player3, player4, player5], 3.5, "NA", player1);
+validGames.push(xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx);
 
- //var names for players must be unique across all games
- //var names could be concatenation of gameID and playerID to allow two players of same IDs in different games
- var player6 = new player("yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
- "Player 1", "red", true);
+//distribute_fields("xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx");
+
+xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx.fieldsPlayed.push(field1);
+xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx.fieldsPlayed.push(field2);
+xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx.fieldsPlayed.push(field3);
+xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx.fieldsPlayed.push(field4);
+//xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx.fieldsPlayed.push(field5);
+xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx.fieldsPlayed.push(field6);
+
+
+console.log("Valid small fields:");
+console.log(valid_small_fields("xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx"));
+console.log("Number of valid small fields: "
+	+ valid_small_fields("xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx").length);
+console.log("Valid large fields:");
+console.log(valid_large_fields("xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx"));
+console.log("Number of valid large fields: "
+	+ valid_large_fields("xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx").length);
+
+
+/* Likely not necessary
+
+ function contains(theArray, item) {
+ for (var i = 0; i < theArray.length; i++) {
+ if (theArray[i] === item) {
+ return true;
+ }
+ }
+ return false;
+ }
+
+ var fieldHistoryCoordinates = function(gameID) {
+ var coordinatesArray = [];
+ var theGame = findGame(gameID, validGames);
+ for (var i = 0; i < theGame.fieldsPlayed.length; i++) {
+ coordinatesArray.push(coordinates(theGame.fieldsPlayed[i].x, theGame.fieldsPlayed[i].y));
+ }
+ return coordinatesArray;
+ };
 
  */
+

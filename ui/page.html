@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -42,23 +43,24 @@
   </div>
   <div class="panel panel-primary">
       <div class="panel-heading">
-        <div align="center"><h2>My Lobby</h2></div>
+        <div align="center"><h2 id="lobby_title">My Lobby</h2></div>
       </div>
       <div class="panel-body">
       <div class="alert alert-success">
-        <div align="center"><strong>Player 1</strong> Austin
+        <div align="center"><strong>Player 1</strong> 
+		<span id="player_1_id"></span>
         </div>
       </div>
 <div class="alert alert-info">
-  <div align="center"><strong>Player 2</strong> Rachel
+  <div align="center"><strong>Player 2</strong> <span id="player_2_id"></span>
   </div>
 </div>
 <div class="alert alert-warning">
-  <div align="center"><strong>Player 3</strong> Lauren
+  <div align="center"><strong>Player 3</strong> <span id="player_3_id"></span>
   </div>
 </div>
 <div class="alert alert-danger">
-  <div align="center"><strong>Player 4</strong> Sam
+  <div align="center"><strong>Player 4</strong> <span id="player_4_id"></span>
   </div>
 </div>
 <div align="center"><button type="button" class="btn btn-success btn-lg">Start Game</button>
@@ -68,5 +70,7 @@
 
   </div>
 </div>
+    <script src="../ui/js/ui_code.js"></script>
+    <script src="../ui/js/ui_page.js"></script>
 </body>
 </html>
