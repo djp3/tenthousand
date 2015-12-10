@@ -2,7 +2,10 @@
 
 CircularList = require('circular-list');
 //TODO: Sam, Assignment.js file needs to be fixed for the requirement to work
-//Assignment = require('Assignment')
+Assignment = require('./Assignment');
+Game = require('./Game');
+Player = require('./Player');
+Field = require('./Field');
 
 var validGames = [];
 var PlayedFields = [];
@@ -283,42 +286,6 @@ var call_get_time = function() {
 
 var sysCurrentTime = call_get_time();
 
-
-//creates new Field object
-function Field(size, type, x, y) {
-	//need to specifiy size as either large or small
-	this.size = size;
-	//need to specify type as irrigation, silo, or building
-	this.type = type;
-	//The x coordinate will be filled in once played	
-	this.x = x;
-	//The y coordinate will be filled in once played
-	this.y = y;
-}
-
-//creates new Game object
-function Game(gameID, listOfPlayers, turnLimit, startTime, whoseTurn) {
-	//gameID randomly created when player creates new Game, or specified when player joins game
-	this.gameID = gameID;
-	//array of all player objects within game - number of player objects created with specified gameID
-	this.listOfPlayers = listOfPlayers;
-	//time limit specified by gameCreator for maximum turn length
-	this.turnLimit = turnLimit;
-	//the time the game was started at - started playing, NOT time at which game was created
-	this.startTime = startTime;
-	//playerID of the player whose turn it is now
-	this.whoseTurn = whoseTurn;
-	//TODO: Jared, this is where field placement history should go
-	this.fieldsPlayed = [];
-}
-
-//creates a new Player object
-function Player(playerID) {
-	//playerID specified when player creates new Game or when player joins game
-	this.playerID = playerID;
-	this.playerFields = [];
-	this.playerAssignments = [];
-}
 
 
 function get_current_player(gameID) {

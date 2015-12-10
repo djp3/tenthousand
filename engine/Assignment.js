@@ -1,3 +1,5 @@
+Field = require('./Field');
+
 function Assignment(){
 	this.name = null;
 	this.asset_name = null;
