@@ -72,14 +72,16 @@ module.exports = {
 			 	players: [<player1_name>,<player2_name>,<player3_name>,<player4_name>]; //possibly null
 			};
 	 */
-	from_api_ajax_join_game:function(user_id, game_id) {
+	from_api_ajax_join_game:function(query) {
+		var user_id = query.user_id;
+		var game_id = query.game_id;
 		if (validate_ID_help === false) {
 			console.log("Error: Invalid game ID. Please try again.");
 		} else if (validate_ID_help) {
 			var theGame = findGame(game_id, validGames);
 			var newPlayer = new Player(user_id);
 			theGame.listOfPlayers.push(newPlayer);
-			socket.socket_player_joined_game(game_id, user_id);
+			//socket.socket_player_joined_game(game_id, user_id);
 			return theGame.listOfPlayers;
 		}
 	},
@@ -238,10 +240,13 @@ var findPlayer = function(game, cplayerid) {
 var findGame = function(gameID, GameArray) {
 	//This will find the game object in the game array given the id.
 	for (var i = 0; i < GameArray.length; i ++) {
+		console.log("findGame searching for a game: "+JSON.stringify(GameArray[i],null,4));
 		if (GameArray[i].gameID === gameID) {
+			console.log("findGame found a game: "+gameID);
 			return GameArray[i];
 		}
 		else {
+			console.log("findGame did not find a game: "+gameID);
 		}
 	}
 };

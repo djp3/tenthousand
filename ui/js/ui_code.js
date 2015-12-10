@@ -45,10 +45,10 @@ var ui_main = function(){
     });
 
 
-	// Joing Game 
+	// Join Game 
     $("div#jg-form-wrapper button").click(function(){
-		var game_id = $("div#cg-form-wrapper #host").val(); // needs to be set
-		var user_id = $("div#cg-form-wrapper #user").val(); // needs to be set
+		var game_id = $("div#cg-form-wrapper #game_id").val(); 
+		var user_id = $("div#cg-form-wrapper #user_id").val();
 			
 		var callback_function = function(result){
 			if(result.error == false){
