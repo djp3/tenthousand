@@ -33,7 +33,6 @@ module.exports = {
 					user_id:<user_id>,
 					turn_length:<turn_length>
 				};
-
 	 returns
 	 result = {
 				error: <true/false>,
@@ -41,14 +40,12 @@ module.exports = {
 			 	game_id: <game_id>
 			};
 	 */
-
-
 	from_api_ajax_create_game:function(user_id, turn_length) {
 		var the_game_id = call_create_ID();
 		var listOfPlayers = [];
-		listOfPlayers.push(user_id);
-		var new_game = new Game(the_game_id, listOfPlayers, turn_length, "NA", user_id);
-		console.log(the_game_id);
+		var newPlayer = new Player(user_id);
+		listOfPlayers.push(newPlayer);
+		var new_game = new Game(the_game_id, listOfPlayers, turn_length, "NA", newPlayer);
 		module.exports.validGames.push(new_game);
 		var ret = {};
 		ret.error = false;
@@ -64,7 +61,6 @@ module.exports = {
 					user_id:<user_id>,
 					game_id:<game_id>,
 				};
-
 	 returns
 	 result = {
 				error: <true/false>,
@@ -106,7 +102,7 @@ module.exports = {
 				whatever the UI team wants
 			};
 	 */
-	from_api_start_game:function(query){
+	from_api_start_game:function(query) {
 		var game_id = query.game_id;
 		distribute_fields(game_id);
 		distribute_assignments_at_start(game_id);
@@ -129,7 +125,6 @@ module.exports = {
 					game_id:<game_id>,
 					user_id:<user_id>,
 				};
-
 	 returns null;
 	 */
 	from_api_player_is_done:function(game_id, user_id, xy_coordinates, field_type, field_size) {
@@ -299,7 +294,7 @@ function Field(size, type, x, y) {
 }
 
 //creates new Game object
-function Game(gameID, listOfPlayers, turnLimit, startTime, whoseTurn) {
+function Game(gameID, listOfPlayers, turnLimit, whoseTurn) { //startTime, whoseTurn) {
 	//gameID randomly created when player creates new Game, or specified when player joins game
 	this.gameID = gameID;
 	//array of all player objects within game - number of player objects created with specified gameID
@@ -307,7 +302,8 @@ function Game(gameID, listOfPlayers, turnLimit, startTime, whoseTurn) {
 	//time limit specified by gameCreator for maximum turn length
 	this.turnLimit = turnLimit;
 	//the time the game was started at - started playing, NOT time at which game was created
-	this.startTime = startTime;
+	this.startTime = sysCurrentTime;
+	//this.startTime = startTime;
 	//playerID of the player whose turn it is now
 	this.whoseTurn = whoseTurn;
 	//TODO: Jared, this is where field placement history should go
@@ -597,7 +593,6 @@ var allCoordinates = function() {
 	for (var i = 50; i > -51; i--) {
 		for (var j = 50; j > -51; j--) {
 			theCoordinates.push(new Coordinates(i, j));
-			//Below will print array of all existing coordinates in a 50x50 board
 			//console.log(i + ", " + j);
 		}
 	}
