@@ -31,10 +31,10 @@ module.exports = {
 	games:games,
 
 	// This is called by the engine 
-	socket_player_joined_game:function(game_id,player_id){
+	socket_player_joined_game:function(game_id,players){
 		socket = module.exports.games[game_id];
 		if(socket != null){
-			var outgoing={player_id:player_id};
+			var outgoing={players:players};
 			socket.emit("player_joined_game",outgoing);
 		}
 		else{

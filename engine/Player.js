@@ -11,6 +11,9 @@ function Player(playerID) {
 	this.playerID = playerID;
 	this.playerFields = [];
 	this.playerAssignments = [];
+	this.getAssignments = function(){
+		return this.playerAssignments;
+	}
 }
 
 module.exports = Player;

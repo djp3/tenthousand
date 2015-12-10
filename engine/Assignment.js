@@ -22,39 +22,39 @@ function Assignment(){
 		return false;
 	}
 	this.checkAssignmentAtPlace = function(fieldsPlayed, addToX, addToY){//Needs serious work
-		xCorner = getLargestX();
-		yCorner = getLargestY();
-		validAssignment = true;
+		var xCorner = this.getLargestX();
+		var yCorner = this.getLargestY();
+		var validAssignment = true;
 		//Check Normal
-		for(i = 0; i < fields.length; i++){
+		for(i = 0; i < this.fields.length; i++){
 			validAssignment = true;
-			if(!containsField(fieldsPlayed, fields[i].x+addToX, fields[i].y+addToY, fields[i].size)){
+			if(!this.containsField(fieldsPlayed, this.fields[i].x+addToX, this.fields[i].y+addToY, this.fields[i].size)){
 				validAssignment = false;
 				break;
 			}
 		}
 		//Check Mirrored horizontal
-		for(i = 0; i < fields.length; i++){
+		for(i = 0; i < this.fields.length; i++){
 			validAssignment = true;
-			if(!containsField(fieldsPlayed, (xCorner-fields[i].x)+addToX, fields[i].y+addToY, fields[i].size)){
+			if(!this.containsField(fieldsPlayed, (xCorner-this.fields[i].x)+addToX, this.fields[i].y+addToY, this.fields[i].size)){
 				validAssignment = false;
 				break;
 			}
 		}
 		
 		//Check mirrored horizontal and vertical
-		for(i = 0; i < fields.length; i++){
+		for(i = 0; i < this.fields.length; i++){
 			validAssignment = true;
-			if(!containsField(fieldsPlayed, (xCorner-fields[i].x)+addToX, (yCorner-fields[i].y)+addToY, fields[i].size)){
+			if(!this.containsField(fieldsPlayed, (xCorner-this.fields[i].x)+addToX, (yCorner-this.fields[i].y)+addToY, this.fields[i].size)){
 				validAssignment = false;
 				break;
 			}
 		}
 		
 		//Check mirrored vertical
-		for(i = 0; i < fields.length; i++){
+		for(i = 0; i < this.fields.length; i++){
 			validAssignment = true;
-			if(!containsField(fieldsPlayed, fields[i].x+addToX, (yCorner-fields[i].y)+addToY, fields[i].size)){
+			if(!this.containsField(fieldsPlayed, this.fields[i].x+addToX, (yCorner-this.fields[i].y)+addToY, this.fields[i].size)){
 				validAssignment = false;
 				break;
 			}
@@ -64,7 +64,7 @@ function Assignment(){
 	this.isValidAssignment = function(fieldsPlayed){
 		for(i = 0; i < fields.length; i++){
 			lastField = fieldsPlayed[fieldsPlayed.length-1]; //get last field placement
-			if(checkAssignmentAtPlace(fieldsPlayed, lastField.x-fields[i].x, lastField.y-fields[i].y)){
+			if(this.checkAssignmentAtPlace(fieldsPlayed, lastField.x-this.fields[i].x, lastField.y-this.fields[i].y)){
 				return true;
 			}
 		}
@@ -72,18 +72,18 @@ function Assignment(){
 	}
 	this.getLargestX = function(){
 		greatestX = 0;
-		for(i = 0; i < fields.length; i++){
-			if(fields[i].x > greatestX){
-				greatestX = fields[i].x;
+		for(i = 0; i < this.fields.length; i++){
+			if(this.fields[i].x > greatestX){
+				greatestX = this.fields[i].x;
 			}
 		}
 		return greatestX;
 	}
 	this.getLargestY = function(){		
 		greatestY = 0;
-		for(i = 0; i < fields.length; i++){
-			if(fields[i].y > greatestY){
-				greatestY = fields[i].y;
+		for(i = 0; i < this.fields.length; i++){
+			if(this.fields[i].y > greatestY){
+				greatestY = this.fields[i].y;
 			}
 		}
 		return greatestY;

@@ -2,6 +2,7 @@
  * http://usejsdoc.org/
  */
 
+Player = require('./Player');
 Field = require('./Field');
 
 //creates new Game object
@@ -18,5 +19,14 @@ function Game(gameID, listOfPlayers, turnLimit, startTime, whoseTurn) {
 	this.whoseTurn = whoseTurn;
 	//TODO: Jared, this is where field placement history should go
 	this.fieldsPlayed = [];
+	this.getGameBoard = function(){
+		return this.fieldsPlayed;
+	}
+	this.getAssignmentsHeld = function(){
+		var assignments = [];
+		for(i = 0; i < this.listOfPlayers.length; i++){
+			assignments.concat(this.listOfPlayers[i].getAssignments());
+		}
+	}
 }
 module.exports = Game;

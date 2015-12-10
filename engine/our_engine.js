@@ -2,7 +2,10 @@
 
 CircularList = require('circular-list');
 //TODO: Sam, Assignment.js file needs to be fixed for the requirement to work
-//Assignment = require('Assignment')
+Assignment = require('./Assignment');
+Game = require('./Game');
+Player = require('./Player');
+Field = require('./Field');
 
 var validGames = [];
 var PlayedFields = [];
@@ -86,9 +89,6 @@ module.exports = {
 		theGame.whoseturn = user_id;
 		setTimeout(advance_turn(game_id),theGame.turnLimit * 1000)
 	},
-
-
-
 
 	/*****************************************
 	 incoming = {
@@ -231,6 +231,8 @@ var findPlayer = function(game, cplayerid) {
 };
 
 var findGame = function(gameID, GameArray) {
+	return GameArray[findGameNum(gameID, GameArray)];
+	/*
 	//This will find the game object in the game array given the id.
 	for (var i = 0; i < GameArray.length; i ++) {
 		if (GameArray[i].gameID === gameID) {
@@ -238,12 +240,12 @@ var findGame = function(gameID, GameArray) {
 		}
 		else {
 		}
-	}
+	}*/
 };
 
 var findGameNum = function(gameID, GameArray) {
 	//this will find the position of the game object in a game array.
-	for (var i = 0; i < GameArray.size; i++) {
+	for (var i = 0; i < GameArray.length; i++) {
 		if (GameArray[i] === gameID) {
 			return i;
 		}
@@ -255,8 +257,10 @@ var findGameNum = function(gameID, GameArray) {
 var get_valid_assignments = function(game_id){
 	var currentGame = findGame(game_id);
 	var validAssignments = [];
-	for(var i = 0; i < currentGame.get_assignments(); i++){
-		if(currentGame.get_assignments()[i].contains_tile_size(currentGame.get_fields())) {
+	var assignmentsHeld = currentGame.getAssignmentsHeld();
+	for(var i = 0; i < assignmentsHeld.length(); i++){
+		if(assignmentsHeld[i].isValidAssignment(currentGame.fieldsPlayed)) {
+			validAssignments.add(assignmentsHeld[i]);
 		}
 	}
 	return validAssignments;
@@ -281,6 +285,7 @@ var call_get_time = function() {
 var sysCurrentTime = call_get_time();
 
 
+/*
 //creates new Field object
 function Field(size, type, x, y) {
 	//need to specifiy size as either large or small
@@ -317,7 +322,7 @@ function Player(playerID) {
 	this.playerFields = [];
 	this.playerAssignments = [];
 }
-
+*/
 
 function get_current_player(gameID) {
 	var theGame = findGame(gameID, validGames);
@@ -337,6 +342,18 @@ function advance_turn(gameID){
 }
 
 /*
+var joinGame = function(userID, gameID) {
+	var gameIDString = gameID.gameID;
+	console.log("TEST: " + gameIDString);
+	if (validate_ID_help(gameIDString)) {
+		gameID['listOfPlayers'].push(userID);
+		console.log("All players: " + gameID.listOfPlayers);
+	} else {
+		console.log("Error: Invalid game ID. Please try again.");
+	}
+	return gameID.listOfPlayers;
+};
+
 //Needs work
 var startGame = function(game) {
 	game.startTime = sysCurrentTime;
