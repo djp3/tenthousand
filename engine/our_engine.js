@@ -2,7 +2,10 @@
 
 CircularList = require('circular-list');
 //TODO: Sam, Assignment.js file needs to be fixed for the requirement to work
-//Assignment = require('Assignment')
+Assignment = require('./Assignment');
+Game = require('./Game');
+Player = require('./Player');
+Field = require('./Field');
 
 var validGames = [];
 var PlayedFields = [];
@@ -33,7 +36,6 @@ module.exports = {
 					user_id:<user_id>,
 					turn_length:<turn_length>
 				};
-
 	 returns
 	 result = {
 				error: <true/false>,
@@ -41,14 +43,12 @@ module.exports = {
 			 	game_id: <game_id>
 			};
 	 */
-
-
 	from_api_ajax_create_game:function(user_id, turn_length) {
 		var the_game_id = call_create_ID();
 		var listOfPlayers = [];
-		listOfPlayers.push(user_id);
-		var new_game = new Game(the_game_id, listOfPlayers, turn_length, "NA", user_id);
-		console.log(the_game_id);
+		var newPlayer = new Player(user_id);
+		listOfPlayers.push(newPlayer);
+		var new_game = new Game(the_game_id, listOfPlayers, turn_length, "NA", newPlayer);
 		module.exports.validGames.push(new_game);
 		var ret = {};
 		ret.error = false;
@@ -64,7 +64,6 @@ module.exports = {
 					user_id:<user_id>,
 					game_id:<game_id>,
 				};
-
 	 returns
 	 result = {
 				error: <true/false>,
@@ -97,9 +96,6 @@ module.exports = {
 		setTimeout(advance_turn(game_id),theGame.turnLimit * 1000)
 	},
 
-
-
-
 	/*****************************************
 	 incoming = {
 					game_id:<game_id>,
@@ -112,7 +108,7 @@ module.exports = {
 				whatever the UI team wants
 			};
 	 */
-	from_api_start_game:function(query){
+	from_api_start_game:function(query) {
 		var game_id = query.game_id;
 		distribute_fields(game_id);
 		distribute_assignments_at_start(game_id);
@@ -135,7 +131,6 @@ module.exports = {
 					game_id:<game_id>,
 					user_id:<user_id>,
 				};
-
 	 returns null;
 	 */
 	from_api_player_is_done:function(game_id, user_id, xy_coordinates, field_type, field_size) {
@@ -242,6 +237,8 @@ var findPlayer = function(game, cplayerid) {
 };
 
 var findGame = function(gameID, GameArray) {
+	return GameArray[findGameNum(gameID, GameArray)];
+	/*
 	//This will find the game object in the game array given the id.
 	for (var i = 0; i < GameArray.length; i ++) {
 		console.log("findGame searching for a game: "+JSON.stringify(GameArray[i],null,4));
@@ -252,12 +249,12 @@ var findGame = function(gameID, GameArray) {
 		else {
 			console.log("findGame did not find a game: "+gameID);
 		}
-	}
+	}*/
 };
 
 var findGameNum = function(gameID, GameArray) {
 	//this will find the position of the game object in a game array.
-	for (var i = 0; i < GameArray.size; i++) {
+	for (var i = 0; i < GameArray.length; i++) {
 		if (GameArray[i] === gameID) {
 			return i;
 		}
@@ -269,8 +266,10 @@ var findGameNum = function(gameID, GameArray) {
 var get_valid_assignments = function(game_id){
 	var currentGame = findGame(game_id);
 	var validAssignments = [];
-	for(var i = 0; i < currentGame.get_assignments(); i++){
-		if(currentGame.get_assignments()[i].contains_tile_size(currentGame.get_fields())) {
+	var assignmentsHeld = currentGame.getAssignmentsHeld();
+	for(var i = 0; i < assignmentsHeld.length(); i++){
+		if(assignmentsHeld[i].isValidAssignment(currentGame.fieldsPlayed)) {
+			validAssignments.add(assignmentsHeld[i]);
 		}
 	}
 	return validAssignments;
@@ -295,6 +294,7 @@ var call_get_time = function() {
 var sysCurrentTime = call_get_time();
 
 
+/*
 //creates new Field object
 function Field(size, type, x, y) {
 	//need to specifiy size as either large or small
@@ -308,7 +308,7 @@ function Field(size, type, x, y) {
 }
 
 //creates new Game object
-function Game(gameID, listOfPlayers, turnLimit, startTime, whoseTurn) {
+function Game(gameID, listOfPlayers, turnLimit, whoseTurn) { //startTime, whoseTurn) {
 	//gameID randomly created when player creates new Game, or specified when player joins game
 	this.gameID = gameID;
 	//array of all player objects within game - number of player objects created with specified gameID
@@ -316,7 +316,8 @@ function Game(gameID, listOfPlayers, turnLimit, startTime, whoseTurn) {
 	//time limit specified by gameCreator for maximum turn length
 	this.turnLimit = turnLimit;
 	//the time the game was started at - started playing, NOT time at which game was created
-	this.startTime = startTime;
+	this.startTime = sysCurrentTime;
+	//this.startTime = startTime;
 	//playerID of the player whose turn it is now
 	this.whoseTurn = whoseTurn;
 	//TODO: Jared, this is where field placement history should go
@@ -330,7 +331,7 @@ function Player(playerID) {
 	this.playerFields = [];
 	this.playerAssignments = [];
 }
-
+*/
 
 function get_current_player(gameID) {
 	var theGame = findGame(gameID, validGames);
@@ -350,6 +351,18 @@ function advance_turn(gameID){
 }
 
 /*
+var joinGame = function(userID, gameID) {
+	var gameIDString = gameID.gameID;
+	console.log("TEST: " + gameIDString);
+	if (validate_ID_help(gameIDString)) {
+		gameID['listOfPlayers'].push(userID);
+		console.log("All players: " + gameID.listOfPlayers);
+	} else {
+		console.log("Error: Invalid game ID. Please try again.");
+	}
+	return gameID.listOfPlayers;
+};
+
 //Needs work
 var startGame = function(game) {
 	game.startTime = sysCurrentTime;
@@ -606,7 +619,6 @@ var allCoordinates = function() {
 	for (var i = 50; i > -51; i--) {
 		for (var j = 50; j > -51; j--) {
 			theCoordinates.push(new Coordinates(i, j));
-			//Below will print array of all existing coordinates in a 50x50 board
 			//console.log(i + ", " + j);
 		}
 	}
