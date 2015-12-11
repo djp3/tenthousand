@@ -82,7 +82,11 @@ module.exports = {
 			var newPlayer = new Player(user_id);
 			theGame.listOfPlayers.push(newPlayer);
 			//socket.socket_player_joined_game(game_id, user_id);
-			return theGame.listOfPlayers;
+			var ret = {};
+			ret.error = false;
+			ret.errors = [];
+			ret.data = theGame.listOfPlayers;
+			return ret;
 		}
 	},
 	/*****************************************/
