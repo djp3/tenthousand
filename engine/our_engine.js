@@ -153,6 +153,7 @@ module.exports = {
 	}
 };
 
+// given a game ID, determine whether this game can be joined
 var validate_ID_help = function(id){
 	for (var i = 0; i < validGames.length; i++) {
 		if (validGames[i].gameID === id) {
@@ -226,6 +227,7 @@ var removeField = function(fsize, ftype, player, xy) {
 	}
 };
 
+// given a game object and a player ID, return the player object in the game associated with that ID
 var findPlayer = function(game, cplayerid) {
 	for (var i = 0; i < game.listOfPlayers.length; i++) {
 		if (game.listOfPlayers[i].playerID === cplayerid) {
@@ -236,10 +238,10 @@ var findPlayer = function(game, cplayerid) {
 	}
 };
 
+//find the game object in the game array given the id.
 var findGame = function(gameID, GameArray) {
 	return GameArray[findGameNum(gameID, GameArray)];
 	/*
-	//This will find the game object in the game array given the id.
 	for (var i = 0; i < GameArray.length; i ++) {
 		console.log("findGame searching for a game: "+JSON.stringify(GameArray[i],null,4));
 		if (GameArray[i].gameID === gameID) {
@@ -252,8 +254,8 @@ var findGame = function(gameID, GameArray) {
 	}*/
 };
 
+//find the position of the game object in a game array given a gameID and the array
 var findGameNum = function(gameID, GameArray) {
-	//this will find the position of the game object in a game array.
 	for (var i = 0; i < GameArray.length; i++) {
 		if (GameArray[i] === gameID) {
 			return i;
@@ -284,6 +286,7 @@ var call_create_ID = function() {
 	return helper_create_ID() + helper_create_ID(true) + helper_create_ID(true) + helper_create_ID();
 };
 
+// returns the current time in te formal hours:mintues:seconds
 var call_get_time = function() {
 	var currentTime = new Date();
 	return currentTime.getHours().toString()
@@ -384,6 +387,10 @@ var advanceTurn = function(game) {
 };
 */
 
+// an array of all of the minor assignments in the game
+// each element of the array is an assignment
+// each assignment is an array of objects
+// each object corresponds to a field and gives the type of the field, along with the (x,y) coordinates of the upper leftmost corner of the field
 var minor_assignments = [[{type:"small", x:0, y:0}, {type:"small", x:1, y:0}, {type:"small", x:2, y:0}],
 	[{type:"large", x:0, y:0}, {type:"small", x:2, y:0}, {type:"small", x:2, y:1}],
 	[{type:"small", x:0, y:1}, {type:"small", x:0, y:2}, {type:"large", x:1, y:0}],
@@ -416,6 +423,10 @@ var minor_assignments = [[{type:"small", x:0, y:0}, {type:"small", x:1, y:0}, {t
 ];
 
 
+// an array of all of the major assignments in the game
+// each element of the array is an assignment
+// each assignment is an array of objects
+// each object corresponds to a field and gives the type of the field, along with the (x,y) coordinates of the upper leftmost corner of the field
 var major_assignments = [[{type:"small", x:0, y:1}, {type:"small", x:1, y:0}, {type:"small", x:1, y:1}, {type:"small", x:2, y:1}],
 	[{type:"small", x:0, y:0}, {type:"small", x:0, y:1}, {type:"small", x:1, y:1}, {type:"small", x:2, y:1}],
 	[{type:"small", x:0, y:1}, {type:"small", x:1, y:1}, {type:"small", x:2, y:1}, {type:"small", x:2, y:0}],
@@ -495,7 +506,7 @@ var major_assignments = [[{type:"small", x:0, y:1}, {type:"small", x:1, y:0}, {t
 	[{type:"large", x:0, y:5}, {type:"large", x:1, y:3}, {type:"large", x:3, y:0}, {type:"large", x:3, y:2}]
 ];
 
-
+// at the beginning of each game, this function distributes assignments to each player in the game and ensures no duplicate assignments are distributed
 var distribute_assignments_at_start = function(gameID){
 	var global_small_assignments_chosen = [];
 	var global_large_assignments_chosen = [];
@@ -510,10 +521,14 @@ var distribute_assignments_at_start = function(gameID){
 		for (var k = 0; k < large_assignments_chosen.size; k++){
 			global_large_assignments_chosen.push(large_assignments_chosen[j]);
 		}
+		// give player i his or her assignments
 		tempGame.listOfPlayers[i].playerAssignments = small_assignments_chosen.concat(large_assignments_chosen);
 	}
 };
 
+// distributes all of the minor assignments for each player in the game
+// chooses random assignments for each player that have not already been given to another player
+// works for games from size 3 to size 5
 var distribute_small_assignments_for_player = function(size_of_game, assignments_already_chosen){
 	var tempRandomNum = -1;
 	var small_assignments = [];
@@ -521,9 +536,11 @@ var distribute_small_assignments_for_player = function(size_of_game, assignments
 	if (size_of_game == 3){
 		for (var i = 0; i < 6; i++){
 			tempRandomNum = getRandomInt(0,minor_assignments.size);
+			// check to make sure this assignment has not already been given to another player
 			if (assignments_chosen.indexOf(minor_assignments[tempRandomNum]) > -1){
 				i--;
 			}
+			// if it has not
 			else {
 				small_assignments.push(minor_assignments[tempRandomNum]);
 				assignments_chosen.push(minor_assignments[tempRandomNum]);
@@ -533,9 +550,11 @@ var distribute_small_assignments_for_player = function(size_of_game, assignments
 	if (size_of_game == 4){
 		for (var j = 0; j < 5; j++){
 			tempRandomNum = getRandomInt(0,minor_assignments.size);
+			// check to make sure this assignment has not already been given to another player
 			if (assignments_chosen.indexOf(minor_assignments[tempRandomNum]) > -1){
 				j--;
 			}
+			// if it has not
 			else {
 				small_assignments.push(minor_assignments[tempRandomNum]);
 				assignments_chosen.push(minor_assignments[tempRandomNum]);
@@ -545,9 +564,11 @@ var distribute_small_assignments_for_player = function(size_of_game, assignments
 	if (size_of_game == 5){
 		for (var k = 0; k < 4; k++){
 			tempRandomNum = getRandomInt(0,minor_assignments.size);
+			// check to make sure this assignment has not already been given to another player
 			if (assignments_chosen.indexOf(minor_assignments[tempRandomNum]) > -1){
 				k--;
 			}
+			// if it has not
 			else {
 				small_assignments.push(minor_assignments[tempRandomNum]);
 				assignments_chosen.push(minor_assignments[tempRandomNum]);
@@ -557,6 +578,9 @@ var distribute_small_assignments_for_player = function(size_of_game, assignments
 	return small_assignments;
 };
 
+// distributes all of the major assignments for each player in the game
+// chooses random assignments for each player that have not already been given to another player
+// works for games from size 3 to size 5
 var distribute_large_assignments_for_player = function(size_of_game, assignments_already_chosen){
 	var tempRandomNum = -1;
 	var large_assignments = [];
@@ -564,9 +588,11 @@ var distribute_large_assignments_for_player = function(size_of_game, assignments
 	if (size_of_game == 3){
 		for (var i = 0; i < 7; i++){
 			tempRandomNum = getRandomInt(0,major_assignments.size);
+			// check to make sure this assignment has not already been given to another player
 			if (assignments_chosen.indexOf(major_assignments[tempRandomNum]) > -1){
 				i--;
 			}
+			// if it has not
 			else {
 				large_assignments.push(major_assignments[tempRandomNum]);
 				assignments_chosen.push(major_assignments[tempRandomNum]);
@@ -576,9 +602,11 @@ var distribute_large_assignments_for_player = function(size_of_game, assignments
 	if (size_of_game == 4){
 		for (var j = 0; j < 6; j++){
 			tempRandomNum = getRandomInt(0,major_assignments.size);
+			// check to make sure this assignment has not already been given to another player
 			if (assignments_chosen.indexOf(major_assignments[tempRandomNum]) > -1){
 				j--;
 			}
+			// if it has not
 			else {
 				large_assignments.push(major_assignments[tempRandomNum]);
 				assignments_chosen.push(major_assignments[tempRandomNum]);
@@ -588,9 +616,11 @@ var distribute_large_assignments_for_player = function(size_of_game, assignments
 	if (size_of_game == 5){
 		for (var k = 0; k < 5; k++){
 			tempRandomNum = getRandomInt(0,major_assignments.size);
+			// check to make sure this assignment has not already been given to another player
 			if (assignments_chosen.indexOf(major_assignments[tempRandomNum]) > -1){
 				k--;
 			}
+			// if it has not
 			else {
 				large_assignments.push(major_assignments[tempRandomNum]);
 				assignments_chosen.push(major_assignments[tempRandomNum]);
@@ -600,9 +630,8 @@ var distribute_large_assignments_for_player = function(size_of_game, assignments
 	return large_assignments;
 };
 
-/**
- * Returns a random number between min (inclusive) and max (exclusive)
- */
+
+// Returns a random number between min (inclusive) and max (exclusive)
 function getRandomInt(min, max) {
 	return Math.floor(Math.random() * (max - min)) + min;
 }
