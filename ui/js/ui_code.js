@@ -52,7 +52,7 @@ var ui_main = function(){
 			
 		var callback_function = function(result){
 			if(result.error == false){
-				window.open("page.html?user_data="+encodeURIComponent(JSON.stringify(result.data)),"_self");
+				window.open("page.html?game_id="+game_id+"&user_id="+user_id+"&user_data="+encodeURIComponent(JSON.stringify(result.data)),"_self");
 			}
 			else{
 				alert("We couldn't register your game because:"+result.errors[0]);
