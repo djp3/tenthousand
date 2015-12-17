@@ -605,6 +605,10 @@ function Coordinates(x, y) {
 	this.y = y;
 }
 
+/**
+ * Creates an array of all possible coordinates on a game board from (-50, -50) to (50, 50)
+ * @returns {Array} - array of all coordinates existing in the above range
+ */
 var allCoordinates = function() {
 	var theCoordinates = [];
 	for (var i = 50; i > -51; i--) {
@@ -616,6 +620,13 @@ var allCoordinates = function() {
 	return theCoordinates;
 };
 
+/**
+ * Returns coordinates that define the boundary above which (in the positive direction) a new field may NOT be placed
+ * @param fieldArray - an array of all fields that have already been placed in the game
+ * @returns {Coordinates} - corresponding to the greatest x and y positions at which a new field may be placed - If
+ * no moves have yet been made in the game, this will return (0, 0) as the only valid placement - Anything greater
+ * than these coordinates would be considered an invalid move
+ */
 var greaterFieldBound = function(fieldArray) {
 	var theGreaterBound = new Coordinates(0, 0);
 	for (var i = 0; i < fieldArray.length; i++) {
@@ -631,6 +642,14 @@ var greaterFieldBound = function(fieldArray) {
 	return theGreaterBound;
 };
 
+/**
+ * If one is checking for valid placements of a new LARGE field, returns coordinates that define the
+ * boundary below which (in the negative direction) a new LARGE field may NOT be placed
+ * @param fieldArray - an array of all fields that have already been placed in the game
+ * @returns {Coordinates} - corresponding to the lowest x and y positions at which a new LARGE field may be placed -
+ * Returns (0, 0) if no other moves have yet been made - Any placement below these coordinates would
+ * be considered an invalid move
+ */
 var lesserFieldBoundLarge = function(fieldArray) {
 	var theLesserBound = new Coordinates (0, 0);
 	for (var i = 0; i < fieldArray.length; i++) {
@@ -640,6 +659,14 @@ var lesserFieldBoundLarge = function(fieldArray) {
 	return theLesserBound;
 };
 
+/**
+ * If one is checking for valid placements of a new SMALL field, returns coordinates that define the
+ * boundary below which (in the negative direction) a new SMALL field may NOT be placed
+ * @param fieldArray - an array of all fields that have already been placed in the game
+ * @returns {Coordinates} - corresponding to the lowest x and y positions at which a new SMALL field may be placed -
+ * Returns (0, 0) if no other moves have yet been made - Any placement below these coordinates would
+ * be considered an invalid move
+ */
 var lesserFieldBoundSmall = function(fieldArray) {
 	var theLesserBound = new Coordinates (0, 0);
 	for (var i = 0; i < fieldArray.length; i++) {
@@ -649,6 +676,16 @@ var lesserFieldBoundSmall = function(fieldArray) {
 	return theLesserBound;
 };
 
+/**
+ * If one is checking for valid placements of a new LARGE field, this returns an array of all of the coordinates
+ * at which a LARGE field placement would be adjacent to an already placed field
+ * @param proposedCoordinates - an array of all coordinates that are currently candidates at which a field may be
+ * placed before additional invalid coordinates are eliminated - Generally, allCoordinates is most
+ * effective parameter to be given here
+ * @param placedFields - an array of all fields that have already been placed in the game
+ * @returns {Array} - array of coordinates at which a LARGE field could be placed and would be adjacent to a
+ * field already placed on the game board
+ */
 var checkAdjacentLarge = function(proposedCoordinates, placedFields) {
 	var adjacentCoordinates = [];
 	for (var i = 0; i < proposedCoordinates.length; i++) {
@@ -718,6 +755,16 @@ var checkAdjacentLarge = function(proposedCoordinates, placedFields) {
 	return cleanedArray;
 };
 
+/**
+ * If one is checking for valid placements of a new SMALL field, this returns an array of all of the coordinates
+ * at which a SMALL field placement would be adjacent to an already placed field
+ * @param proposedCoordinates - an array of all coordinates that are currently candidates at which a field may be
+ * placed before additional invalid coordinates are eliminated - Generally, allCoordinates is most
+ * effective parameter to be given here
+ * @param placedFields - an array of all fields that have already been placed in the game
+ * @returns {Array} - array of coordinates at which a SMALL field could be placed and would be adjacent to a
+ * field already placed on the game board
+ */
 var checkAdjacentSmall = function(proposedCoordinates, placedFields) {
 	var adjacentCoordinates = [];
 	for (var i = 0; i < proposedCoordinates.length; i++) {
@@ -787,8 +834,13 @@ var checkAdjacentSmall = function(proposedCoordinates, placedFields) {
 	return cleanedArray;
 };
 
-
-
+/**
+ * Will return all coordinates at which a LARGE field may be legally placed
+ * @param gameID - a string corresponding to the gameID of a Game object, for which valid LARGE field moves
+ * will be returned given current game state
+ * @returns {*} - If no moves have yet been made in the game, this returns coordinates (0, 0) as the only valid
+ * field placement. Otherwise, returns array of all coordinates at which a LARGE field placement would be valid
+ */
 var valid_large_fields = function(gameID) {
 	var theGame = findGame(gameID, module.exports.validGames);
 	//array validMoves stores coordinates objects
@@ -916,10 +968,13 @@ var valid_large_fields = function(gameID) {
 	}
 };
 
-
-
-
-
+/**
+ * Will return all coordinates at which a SMALL field may be legally placed
+ * @param gameID - a string corresponding to the gameID of a Game object, for which valid SMALL field moves
+ * will be returned given current game state
+ * @returns {*} - If no moves have yet been made in the game, this returns coordinates (0, 0) as the only valid
+ * field placement. Otherwise, returns array of all coordinates at which a SMALL field placement would be valid
+ */
 var valid_small_fields = function(gameID) {
 	var theGame = findGame(gameID, module.exports.validGames);
 	//array validMoves stores coordinates objects
